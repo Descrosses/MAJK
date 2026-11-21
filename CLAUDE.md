@@ -38,8 +38,14 @@ en IA. **Réponds toujours en français.**
 > `--mass-*` survivent (argent, ombre-titre, halo-trait, rouge). Garde-fou :
 > `styles/memeDaPourTous.test.ts` (une règle MASS ne vit que dans un
 > en-tête). Dans le point 9 de la section MASS plus bas, seul ce qui touche
-> aux en-têtes est encore vrai ; le reste est de l'HISTORIQUE. FEMMES suivra
-> la même règle (lot à venir).
+> aux en-têtes est encore vrai ; le reste est de l'HISTORIQUE.
+> **FEMMES, lot 4 : même règle.** Ses écrans gardent leur feuille
+> (`Femmes.module.css`) et leur BANDEAU comme avant (photo, logo « MAJK
+> FEMMES », titres penchés posés dessus) ; dessous, pastilles, cartes,
+> boutons, cases de semaine, lignes de jour, états, compteur et champs
+> prennent les valeurs de POWER, en rose. Plus de `--grad-accent` ni de
+> `--cyan-femmes` ; `--shadow-action` rose. Les passages « synthwave » plus
+> bas sont de l'HISTORIQUE. Garde-fou : `styles/memeDaPourTous.test.ts`.
 > Lot 2 : pastilles à bord décoratif, consignes en aplat `--accent-dim`,
 > sélecteur bordé avec « + » à l'accent (`styles/composantsClairs.test.ts`).
 

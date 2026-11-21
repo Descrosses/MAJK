@@ -11,6 +11,15 @@
  *
  * Avant de « corriger » une valeur : rouvrir la planche et mesurer.
  *
+ * ── DA claire, lot 4 (21 novembre) ────────────────────────────────────────
+ *
+ * « La même DA pour chaque programme, juste les couleurs changent » : SOUS le
+ * bandeau, les pièces prennent les valeurs de POWER (pastilles, cartes,
+ * boutons, semaines, lignes de jour, états, champs) — seul l'accent rose
+ * change. Le BANDEAU (photo, logo « MAJK FEMMES », titres posés dessus) reste
+ * « tout comme avant », comme pour MASS. Les cotes de planche ci-dessous ne
+ * valent plus que pour le bandeau et la mise en page, plus pour l'habillage.
+ *
  * Rien ici ne peut atteindre POWER ni MASS : les classes sont locales au
  * module. Depuis la DA claire (21 novembre), FEMMES prend les polices
  * communes (Oswald, Inter) : plus de famille de police propre.
@@ -201,25 +210,20 @@
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  height: 31px;
-  padding: 0 11px;
+  padding: 4px 10px;
   border-radius: 999px;
-  background: rgb(30 8 60 / 55%);
-  border: 1.5px solid rgb(226 200 255 / 80%);
-  box-shadow: 0 0 8px rgb(200 150 255 / 22%);
-  font-family: var(--f);
-  font-size: 14.5px;
-  font-weight: 700;
-  color: var(--ink);
+  /* Une pastille informe : bord décoratif, comme sur POWER. */
+  border: 1px solid var(--line);
+  background: var(--surface);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--ink-2);
   white-space: nowrap;
 }
 
-/* Sur la planche, les deux dernières pastilles tirent sur le bleu. */
-.chip:nth-child(n + 3) {
-  border-color: rgb(130 200 240 / 80%);
-}
-
 .chipCaps {
+  color: var(--ink);
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.02em;
 }
@@ -240,9 +244,9 @@
 }
 
 .carte {
-  border-radius: 14px;
-  border: 2px solid var(--line);
-  background: var(--grad-surface, var(--surface));
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
+  background: var(--surface);
   box-shadow: var(--shadow-card);
   /* 17 à gauche, 14 à droite : c'est ce qui laisse tenir « …remettre le
      corps » sur la première ligne, comme sur la planche. */
@@ -267,8 +271,7 @@
 
 /* La bordure rose : la carte qui appelle une action. */
 .carteRose {
-  border-color: var(--accent);
-  box-shadow: var(--shadow-card);
+  border-color: var(--line);
 }
 
 /* La carte d'action de l'accueil : 217 de haut, bouton à 9 px des bords. */
@@ -301,26 +304,27 @@
 .carteTitre {
   margin: 0;
   font-family: var(--f);
-  font-style: italic;
-  font-weight: 800;
-  font-size: 33px;
-  line-height: 34px;
+  font-weight: 700;
+  font-size: 1.375rem;
+  line-height: 1.15;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
   color: var(--ink);
 }
 
 .carteIcone .carteTitre {
-  font-size: 25px;
-  line-height: 28px;
+  font-size: 1.125rem;
+  line-height: 1.2;
 }
 
 /* « Objectif de la semaine » : 189 px de large, pictogramme de 34. */
 .carteTitreIcone {
   display: flex;
   align-items: center;
-  gap: 17px;
+  gap: 14px;
   min-height: 35px;
-  font-size: 24px;
-  line-height: 26px;
+  font-size: 1.125rem;
+  line-height: 1.2;
 }
 
 .carteTexte {
@@ -372,13 +376,13 @@
 .lieu {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  height: 27px;
-  padding: 0 13px;
+  gap: 6px;
+  min-height: 28px;
+  padding: 0 10px;
   border-radius: 999px;
-  border: 1.5px solid var(--accent-bright);
-  font-family: var(--f);
-  font-size: 17px;
+  border: 1px solid var(--line);
+  background: var(--accent-dim);
+  font-size: 0.8125rem;
   font-weight: 700;
   color: var(--accent-ink);
   white-space: nowrap;
@@ -388,12 +392,10 @@
 .gros {
   margin: 0;
   font-family: var(--f);
-  font-style: italic;
-  font-weight: 800;
+  font-weight: 700;
   font-size: 41px;
   line-height: 40px;
   color: var(--ink);
-  text-shadow: none;
 }
 
 .carteAction .gros {
@@ -412,17 +414,18 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 12px;
+  gap: 10px;
   width: 100%;
-  min-height: 61px;
-  border: 1.5px solid var(--accent-deep);
-  border-radius: 14px;
-  background: var(--grad-accent, var(--accent));
-  box-shadow: var(--shadow-action, 0 6px 16px rgb(176 74 114 / 22%));
+  min-height: 62px;
+  border: 0;
+  border-radius: var(--radius);
+  /* Le bouton d'action de POWER, en rose. */
+  background: linear-gradient(180deg, var(--accent-bright) 0%, var(--accent) 100%);
+  box-shadow: var(--shadow-action);
   font-family: var(--f);
-  font-style: italic;
-  font-weight: 800;
-  font-size: 26px;
+  font-weight: 700;
+  font-size: 1.3125rem;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--ink-on-accent);
   cursor: pointer;
@@ -431,12 +434,10 @@
 /* Écrans 3 et 4 : 50 de haut, droit, en minuscules, en retrait de 8. */
 .ctaSobre {
   width: auto;
-  min-height: 50px;
+  min-height: 52px;
   margin: -2px 8px 0;
-  border-radius: 13px;
-  font-style: normal;
-  font-weight: 700;
-  font-size: 26px;
+  font-size: 1.1875rem;
+  letter-spacing: 0.02em;
   text-transform: none;
 }
 
@@ -450,8 +451,8 @@
 }
 
 .cta svg {
-  width: 27px;
-  height: 27px;
+  width: 20px;
+  height: 20px;
   flex: 0 0 auto;
 }
 
@@ -460,24 +461,23 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 14px;
+  gap: 8px;
   width: 100%;
-  min-height: 49px;
+  min-height: var(--tap);
   margin-top: 6px;
-  border-radius: 12px;
-  border: 2px solid var(--cyan-femmes);
+  /* Le bouton secondaire de POWER : contour des contrôles, fond blanc. */
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line-strong);
   background: var(--surface);
-  box-shadow: none;
-  font-family: var(--f);
-  font-size: 20px;
+  font-size: var(--fs-small);
   font-weight: 700;
   color: var(--ink);
   cursor: pointer;
 }
 
 .secondaire svg {
-  width: 27px;
-  height: 27px;
+  width: 18px;
+  height: 18px;
   flex: 0 0 auto;
 }
 
@@ -492,8 +492,8 @@
 
 /* 81 de haut, texte à 20 du bord gauche. */
 .tuile {
-  border-radius: 14px;
-  border: 2px solid var(--line);
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
   background: var(--surface);
   box-shadow: var(--shadow-card);
   padding: 8px 12px 10px 19px;
@@ -524,28 +524,31 @@
      refuse de descendre sous son contenu et la rangée déborde à 375 px. */
   display: grid;
   grid-template-columns: repeat(8, minmax(0, 1fr));
-  gap: 4px;
-  padding: 14px 16px 0;
+  /* 2 px d'écart et 12 de marge : à 390 px, chaque case garde 44 de large
+     (à 4 et 16, elles tombaient à 41). */
+  gap: 2px;
+  padding: 14px 12px 0;
 }
 
 .sem {
-  height: 44px;
+  height: 52px;
   padding: 0;
-  border-radius: 9px;
-  border: 2px solid var(--line-strong);
+  /* Les cases de semaine de POWER : bord décoratif, chiffre penché. */
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line);
   background: var(--surface);
   font-family: var(--f);
+  font-style: italic;
   font-weight: 700;
-  font-size: 25px;
+  font-size: 1.5rem;
   color: var(--ink);
   cursor: pointer;
 }
 
 .semActive {
-  border-color: var(--accent);
-  background: var(--grad-accent, var(--accent));
-  color: var(--ink-on-accent);
-  box-shadow: 0 6px 16px rgb(176 74 114 / 22%);
+  border-color: var(--line-strong);
+  background: linear-gradient(180deg, var(--surface-3) 0%, var(--surface) 100%);
+  box-shadow: var(--shadow-card);
 }
 
 /* ------------------------------------------------- bascule maison / salle */
@@ -563,12 +566,12 @@
   align-items: center;
   justify-content: center;
   gap: 9px;
-  min-height: 44px;
-  border-radius: 10px;
-  border: 2px solid var(--line-strong);
+  min-height: var(--tap);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line-strong);
   background: var(--surface);
   font-family: var(--f);
-  font-size: 22px;
+  font-size: 1.25rem;
   font-weight: 700;
   color: var(--ink);
   cursor: pointer;
@@ -581,21 +584,21 @@
 .basculeOn,
 .basculeOnSalle {
   border-color: var(--accent);
-  background: var(--grad-accent, var(--accent));
+  background: var(--accent);
   color: var(--ink-on-accent);
-  box-shadow: 0 6px 16px rgb(176 74 114 / 22%);
 }
 
 /* ------------------------------------------------------ lignes du circuit */
 
 /* « Circuit · 5 exercices à enchaîner » : 280 px de large. */
 .titreSection {
-  margin: -3px 0 -9px 10px;
+  margin: -3px 0 -9px 2px;
   font-family: var(--f);
-  font-style: italic;
-  font-weight: 800;
-  font-size: 24px;
-  line-height: 26px;
+  font-weight: 700;
+  font-size: 1.125rem;
+  line-height: 1.2;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
   color: var(--ink);
 }
 
@@ -613,10 +616,9 @@
 }
 
 .ligne {
-  border-radius: 10px;
-  border: 1.5px solid var(--filet);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line);
   background: var(--surface);
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / 6%);
   overflow: hidden;
 }
 
@@ -649,10 +651,9 @@
 
 /* La ligne EST le bouton : `.ligneTete` remet bordure et fond à zéro. */
 .lignesSerrees .ligneTete {
-  border: 1.5px solid var(--filet);
-  border-radius: 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
   background: var(--surface);
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / 6%);
 }
 
 .introNom {
@@ -715,19 +716,20 @@
 .consignes {
   margin: 0;
   padding: 11px 17px 15px 24px;
-  border-radius: 14px;
-  border: 2px solid var(--line);
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
   box-shadow: var(--shadow-card);
-  background: var(--grad-surface, var(--surface));
+  background: var(--surface);
 }
 
 .consignesTitre {
   margin: 0;
   font-family: var(--f);
-  font-style: italic;
-  font-weight: 800;
-  font-size: 24px;
-  line-height: 26px;
+  font-weight: 700;
+  font-size: 1.125rem;
+  line-height: 1.2;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
   color: var(--ink);
 }
 
@@ -759,13 +761,13 @@
 /* « En salle : charge légère. » : 36 de haut. */
 .notePetite {
   margin: 10px 0 0 -6px;
-  padding: 7px 15px;
-  border-radius: 9px;
-  background: var(--surface-2);
-  border: 1.5px solid var(--filet);
-  font-size: 16.5px;
-  line-height: 19px;
-  color: var(--texte);
+  padding: 10px 12px;
+  /* La consigne de POWER : aplat d'accent pâle, encre pleine. */
+  border-radius: var(--radius-sm);
+  background: var(--accent-dim);
+  font-size: var(--fs-small);
+  line-height: 1.4;
+  color: var(--ink);
 }
 
 .consignesListe + .notePetite {
@@ -788,11 +790,12 @@
   display: grid;
   grid-template-columns: 65px 1fr 65px;
   align-items: stretch;
-  height: 48px;
+  height: 50px;
   margin: 0 9px;
-  border-radius: 10px;
-  border: 1.5px solid var(--filet);
-  background: var(--surface-2);
+  /* Le sélecteur de POWER : contour des contrôles, « + » à l'accent. */
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line-strong);
+  background: var(--bg);
   overflow: hidden;
 }
 
@@ -805,6 +808,11 @@
   line-height: 1;
   color: var(--ink);
   cursor: pointer;
+}
+
+.compteurBtn:last-child {
+  background: var(--accent);
+  color: var(--ink-on-accent);
 }
 
 .compteurValeur {
@@ -825,12 +833,12 @@
 }
 
 .ressentiBtn {
-  min-height: 46px;
-  border-radius: 11px;
-  border: 2px solid var(--line-strong);
+  min-height: var(--tap);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line-strong);
   background: var(--surface);
   font-family: var(--f);
-  font-size: 21px;
+  font-size: 1.25rem;
   font-weight: 700;
   color: var(--ink);
   cursor: pointer;
@@ -838,9 +846,8 @@
 
 .ressentiOn {
   border-color: var(--accent);
-  background: var(--grad-accent, var(--accent));
+  background: var(--accent);
   color: var(--ink-on-accent);
-  box-shadow: 0 6px 16px rgb(176 74 114 / 22%);
 }
 
 .remarqueLabel {
@@ -857,8 +864,8 @@
   min-height: 50px;
   margin: 0;
   padding: 13px 14px;
-  border-radius: 12px;
-  border: 1.5px solid var(--filet);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line-strong);
   background: var(--surface);
   color: var(--ink);
   font-size: 16.5px;
@@ -879,39 +886,56 @@
   align-items: center;
   gap: 10px;
   width: 100%;
-  min-height: 56px;
-  padding: 4px 9px 4px 17px;
-  border-radius: 12px;
-  border: 1.5px solid var(--accent);
+  min-height: 64px;
+  padding: 8px 10px 8px 10px;
+  /* La ligne de jour de POWER : carte blanche, trait penché devant le jour. */
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line);
   background: var(--surface);
-  box-shadow: inset 2px 0 0 var(--accent-bright);
+  box-shadow: var(--shadow-card);
   text-align: left;
   color: inherit;
   cursor: pointer;
 }
 
 .jourCode {
+  position: relative;
+  padding-left: 12px;
   font-family: var(--f);
   font-style: italic;
-  font-weight: 800;
-  font-size: 23px;
+  font-weight: 700;
+  font-size: 1.125rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
   color: var(--ink);
+}
+
+.jourCode::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: -2px;
+  bottom: -2px;
+  width: 4px;
+  border-radius: 1px;
+  background: var(--accent-bright);
+  transform: skewX(-10deg);
 }
 
 .jourNom {
   display: block;
-  font-family: var(--f);
+  font-family: var(--t);
   font-weight: 700;
-  font-size: 21px;
-  line-height: 21px;
+  font-size: 1rem;
+  line-height: 1.25;
   color: var(--ink);
 }
 
 .jourDetail {
   display: block;
-  margin-top: 1px;
-  font-size: 15.5px;
-  line-height: 18px;
+  margin-top: 2px;
+  font-size: var(--fs-small);
+  line-height: 1.3;
   color: var(--ink-2);
 }
 
@@ -919,25 +943,32 @@
 .etat {
   display: inline-flex;
   align-items: center;
-  height: 27px;
-  padding: 0 11px;
+  justify-content: center;
+  min-width: 66px;
+  min-height: 34px;
+  padding: 0 8px;
+  /* Les états de POWER : capitales condensées, contour des contrôles. */
   border-radius: 999px;
-  border: 1.5px solid var(--accent-bright);
+  border: 1px solid var(--line-strong);
   font-family: var(--f);
-  font-size: 17px;
+  font-size: 0.8125rem;
   font-weight: 700;
-  color: var(--accent-ink);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-2);
   white-space: nowrap;
 }
 
 .etatPrevu {
-  border-color: var(--vert);
-  color: var(--vert);
+  /* La prochaine séance : l'état « aujourd'hui » de POWER. */
+  border-color: transparent;
+  background: var(--accent);
+  color: var(--ink-on-accent);
 }
 
 .jourChevron {
   display: inline-flex;
-  color: var(--accent-bright);
+  color: var(--ink-3);
 }
 
 /* ------------------------------------------------------------- navigation */
@@ -1004,9 +1035,9 @@
 
 /* « Faite » : le même vert que « Prévue », plein plutôt que cerclé. */
 .etatFaite {
-  border-color: var(--vert);
-  background: var(--vert);
-  color: #fff;
+  border-color: transparent;
+  background: rgb(61 220 132 / 16%);
+  color: var(--vert);
 }
 
 /* Une carte qui se choisit (niveau). Le bouton garde la carte telle quelle. */
@@ -1020,8 +1051,10 @@
 }
 
 .choixOn {
-  border-color: var(--accent-bright);
-  box-shadow: 0 6px 16px rgb(176 74 114 / 22%);
+  border-color: var(--accent);
+  box-shadow:
+    inset 0 0 0 1px var(--accent),
+    var(--shadow-card);
 }
 
 /* Oui / Non : deux boutons du même gabarit que le ressenti. */
