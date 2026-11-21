@@ -36,7 +36,8 @@
   align-items: center;
   gap: 5px;
   padding: 4px 10px;
-  border: 1px solid var(--line-strong);
+  /* Une pastille informe, on ne la touche pas : bord décoratif (--line). */
+  border: 1px solid var(--line);
   border-radius: 999px;
   /* Posées sur la page claire, sous l'en-tête : une carte, pas un voile. */
   background: var(--surface);

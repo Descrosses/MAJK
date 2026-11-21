@@ -86,8 +86,14 @@
   align-items: center;
   gap: 5px;
   padding: 4px 10px;
-  border: 1px solid var(--line-strong);
+  /*
+   * Une pastille INFORME, on ne la touche pas : bord décoratif (--line) sur
+   * fond blanc. Avec le contour des contrôles, cinq pastilles
+   * pesaient plus lourd que le bouton « Démarrer » (retour de Guillaume).
+   */
+  border: 1px solid var(--line);
   border-radius: 999px;
+  background: var(--surface);
   color: var(--ink-2);
   font-size: 0.8125rem;
   font-weight: 600;
@@ -132,14 +138,18 @@
   text-transform: uppercase;
 }
 
+/*
+ * Consigne de séance : un aplat de l'accent pâle, sans liseré (maquette
+ * MAJK). Le liseré beige était un reste du thème sombre. Encre pleine sur
+ * --accent-dim : 13 à 14:1 selon le programme.
+ */
 .note {
   margin-top: 10px;
   padding: 10px 12px;
   border-radius: var(--radius-sm);
-  background: var(--grad-surface, var(--surface));
-  border-left: 3px solid var(--line);
+  background: var(--accent-dim);
   font-size: var(--fs-small);
-  color: var(--ink-2);
+  color: var(--ink);
 }
 
 /* ------------------------------------------------------------ sections -- */
@@ -2548,6 +2558,14 @@
 
 :global([data-theme='mass']) .ecranSeance .enteteSeance .metaItem b {
   font-weight: 700;
+}
+
+/* Une consigne dans l'en-tête sombre : même habit que les pastilles, sinon
+   l'encre blanche de la zone photo tomberait sur l'aplat clair. */
+:global([data-theme='mass']) .ecranSeance .enteteSeance .note {
+  border: 1.5px solid #5c5d5e;
+  background: rgb(0 0 0 / 40%);
+  color: #fff;
 }
 
 /* « DUR » : bord rouge, fond rouge sombre, sans la pastille de couleur. */
