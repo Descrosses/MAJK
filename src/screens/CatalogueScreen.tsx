@@ -1,5 +1,18 @@
 /**
- * Le catalogue : les trois familles, et ce qui est réellement jouable.
+ * Le catalogue : les familles, et ce qui est réellement jouable.
+ *
+ * ── Deux écrans (option B de la DA MAJK, lot 5) ────────────────────────────
+ *
+ * `#/catalogue` montre les familles FERMÉES, une carte chacune, avec leur
+ * compte (« 6 étapes · 1 disponible »). Toucher une carte ouvre l'écran de
+ * la famille, `#/catalogue/<famille>` — la même ancre qu'utilisent les tuiles
+ * de l'accueil. L'ancien accordéon dépliait la famille sous sa bannière : à
+ * quatre familles, la liste du programme poussait les autres hors de l'écran.
+ *
+ * Sur l'écran de la famille, le programme à suivre (celui qu'on reprend, sinon
+ * le premier qu'on peut commencer) est déplié d'office, en tête ; les autres
+ * suivent en lignes repliables. Aucune règle ne change : disponible ou à
+ * venir, déblocage, ordre conseillé, confirmation avant de recommencer.
  *
  * ── La règle d'affichage ───────────────────────────────────────────────────
  *
@@ -68,13 +81,131 @@ const LIBELLE: Record<Action, string> = {
   aucune: '',
 };
 
+/** Le thème de l'écran d'une famille : ses couleurs, sans rien d'autre. */
+const THEME_FAMILLE: Record<FamilleId, string> = {
+  power: 'power',
+  mass: 'mass',
+  femmes: 'femmes',
+  perso: 'dcross',
+};
+
+/** Le compte affiché sur la carte d'une famille. */
+export function compteFamille(
+  famille: Famille,
+  programmes: readonly ProgrammeDefinition[],
+): string {
+  if (famille.id === 'perso') {
+    return programmes.length === 0
+      ? 'Importe ton propre programme'
+      : `${programmes.length} programme${programmes.length > 1 ? 's' : ''} importé${programmes.length > 1 ? 's' : ''}`;
+  }
+  const enParcours = programmes.some((p) => p.deblocage);
+  const n = programmes.length;
+  const dispo = programmes.filter((p) => p.statut === 'disponible').length;
+  const unite = enParcours ? `étape${n > 1 ? 's' : ''}` : `programme${n > 1 ? 's' : ''}`;
+  return `${n} ${unite} · ${dispo} disponible${dispo > 1 ? 's' : ''}`;
+}
+
+/**
+ * Le programme mis en avant sur l'écran de la famille : celui qu'on reprend,
+ * sinon le premier qu'on peut démarrer. `null` quand rien n'est jouable.
+ */
+export function programmeVedette(
+  programmes: readonly ProgrammeDefinition[],
+  cycles: CycleRow[],
+): ProgrammeDefinition | null {
+  return (
+    programmes.find((p) => actionPour(p, cycles) === 'reprendre') ??
+    programmes.find((p) => actionPour(p, cycles) !== 'aucune') ??
+    null
+  );
+}
+
 export function CatalogueScreen({
-  familleOuverte: familleDemandee,
+  familleOuverte,
   onOuvrirProgramme,
   onDataChanged,
 }: {
-  /** La famille à ouvrir d'emblée — celle de la tuile touchée à l'accueil. */
+  /** La famille dont on ouvre l'écran — celle de la carte ou de la tuile touchée. */
   familleOuverte?: FamilleId;
+  onOuvrirProgramme: () => void;
+  onDataChanged: () => void;
+}) {
+  const famille = FAMILLES.find((f) => f.id === familleOuverte);
+  return famille === undefined ? (
+    <ListeFamilles />
+  ) : (
+    <VueFamille
+      famille={famille}
+      onOuvrirProgramme={onOuvrirProgramme}
+      onDataChanged={onDataChanged}
+    />
+  );
+}
+
+/* ------------------------------------------------- la liste des familles -- */
+
+function ListeFamilles() {
+  /* Se redessine quand un programme est importé : le compte de ME, MYSELF & I change. */
+  useProgrammesImportes();
+  return (
+    <div className={styles.screen}>
+      <EnTetePlateforme />
+
+      <div className={local.titreEcran}>
+        <h1 className={local.grandTitre}>Choisis ton programme</h1>
+        <p className={local.sousTitreEcran}>
+          <span className={local.trait} aria-hidden="true" />
+          Un programme adapté à ton objectif
+        </p>
+      </div>
+
+      {FAMILLES.map((famille) => {
+        const programmes = programmesDe(famille);
+        const perso = famille.id === 'perso';
+        return (
+          <section
+            key={famille.id}
+            id={`famille-${famille.id}`}
+            className={local.famille}
+            style={{ '--teinte': HABILLAGE[famille.id].teinte } as CSSProperties}
+          >
+            {/* La carte est un LIEN vers l'écran de la famille. */}
+            <a className={local.banniere} href={`#/catalogue/${famille.id}`}>
+              {HABILLAGE[famille.id].photo !== undefined && (
+                <span className={local.bannierePhoto} aria-hidden="true">
+                  <Visuel nom={HABILLAGE[famille.id].photo!} sizes="100vw" />
+                </span>
+              )}
+              <span className={local.banniereVoile} aria-hidden="true" />
+              {/* ME, MYSELF & I n'est jamais « à venir » : on y importe dès aujourd'hui. */}
+              {!perso && programmes.every((p) => p.statut === 'a-venir') && (
+                <span className={local.banniereBadge}>À venir</span>
+              )}
+              <span className={local.banniereTexte}>
+                <span className={local.nomFamille}>{famille.nom}</span>
+                {famille.sousTitre && <span className={local.sousTitre}>{famille.sousTitre}</span>}
+                <span className={local.compte}>{compteFamille(famille, programmes)}</span>
+              </span>
+              <span className={local.banniereChevron} aria-hidden="true">
+                <Icon name="arrow-right" size="18px" />
+              </span>
+            </a>
+          </section>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ------------------------------------------------- l'écran d'une famille -- */
+
+function VueFamille({
+  famille,
+  onOuvrirProgramme,
+  onDataChanged,
+}: {
+  famille: Famille;
   onOuvrirProgramme: () => void;
   onDataChanged: () => void;
 }) {
@@ -84,35 +215,20 @@ export function CatalogueScreen({
   const memoire = useProgrammesImportes();
   const [deplie, setDeplie] = useState<string | null>(null);
   /*
-   * La liste du matériel est REPLIÉE par défaut : cinq objets détaillés
+   * Prérequis et matériel sont REPLIÉS par défaut : cinq objets détaillés
    * prenaient tout l'écran et repoussaient le bouton « Commencer » sous le
    * pli. Le titre dit combien il y en a ; un appui les déplie.
    */
   const [materielOuvert, setMaterielOuvert] = useState(false);
-  /**
-   * La famille dépliée, ou `null`.
-   *
-   * Une seule à la fois : les trois bannières doivent rester visibles d'un
-   * coup d'œil, ce qui est la raison d'être de cet écran. Ouvrir POWER ferme
-   * donc MASS.
-   */
-  const [familleOuverte, setFamilleOuverte] = useState<FamilleId | null>(familleDemandee ?? null);
-
-  /*
-   * Arrivé depuis une tuile de l'accueil : la famille est dépliée, et on la
-   * fait venir en haut de l'écran — sinon FEMMES, troisième bannière, ouvrait
-   * ses cycles sous le pli.
-   */
-  useEffect(() => {
-    if (familleDemandee === undefined) return;
-    document
-      .getElementById(`famille-${familleDemandee}`)
-      ?.scrollIntoView({ block: 'start', behavior: 'auto' });
-  }, [familleDemandee]);
   const [aConfirmer, setAConfirmer] = useState<ProgrammeDefinition | null>(null);
 
   useEffect(() => {
     void tousLesCycles().then(setCycles);
+  }, []);
+
+  /* On arrive en haut de l'écran de la famille, pas au milieu. */
+  useEffect(() => {
+    window.scrollTo(0, 0);
   }, []);
 
   async function agir(programme: ProgrammeDefinition, action: Action) {
@@ -147,338 +263,316 @@ export function CatalogueScreen({
   }
 
   const ligneImportee = (cle: string) => memoire.programmes.find((r) => r.cle === cle) ?? null;
+  const programmes = programmesDe(famille);
+  const perso = famille.id === 'perso';
+  /*
+   * Une famille en PARCOURS (POWER, FEMMES) numérote ses étapes et montre, sur
+   * chaque ligne, si elle est ouverte ou ce qui la débloque. Les autres
+   * familles gardent leur liste simple (MASS numérote son ordre conseillé).
+   */
+  const enParcours = programmes.some((x) => x.deblocage);
+  const vedette = programmeVedette(programmes, cycles);
+  const autres = programmes.filter((p) => p !== vedette);
 
-  return (
-    <div className={styles.screen}>
-      <EnTetePlateforme />
+  const details = (p: ProgrammeDefinition, action: Action) => {
+    const nbPrerequis = p.prerequis.length;
+    const nbMateriel = p.materiel?.length ?? 0;
+    return (
+      <div className={local.details}>
+        <p className={local.resume}>{p.resume}</p>
 
-      <div className={local.titreEcran}>
-        <h1 className={local.grandTitre}>Choisis ton programme</h1>
-        <p className={local.sousTitreEcran}>
-          <span className={local.trait} aria-hidden="true" />
-          Un programme adapté à ton objectif
-        </p>
-      </div>
+        {p.objectifs.length > 0 && (
+          <>
+            <h3 className={local.sousSection}>Objectifs</h3>
+            <ul className={local.puces}>
+              {p.objectifs.map((o) => (
+                <li key={o}>{o}</li>
+              ))}
+            </ul>
+          </>
+        )}
 
-      {FAMILLES.map((famille) => {
-        const programmes = programmesDe(famille);
-        const perso = famille.id === 'perso';
-        return (
-          <section
-            key={famille.id}
-            id={`famille-${famille.id}`}
-            className={local.famille}
-            style={{ '--teinte': HABILLAGE[famille.id].teinte } as CSSProperties}
-          >
-            {/*
-            La bannière est un bouton : elle déplie la famille sur ses
-            programmes, qui restent exactement ceux du catalogue. La maquette
-            montre un chevron, et c'est bien ce qu'il fait — ouvrir la famille,
-            pas naviguer vers un écran de plus.
-          */}
+        {nbPrerequis + nbMateriel > 0 && (
+          /*
+           * Prérequis et matériel à prévoir, AVANT de démarrer : de quoi
+           * acheter une ceinture de lest à temps plutôt que de la découvrir en
+           * semaine 1. Un seul repli pour les deux (maquette MAJK).
+           */
+          <div className={local.materielBloc}>
             <button
               type="button"
-              className={local.banniere}
-              onClick={() => setFamilleOuverte(familleOuverte === famille.id ? null : famille.id)}
-              aria-expanded={familleOuverte === famille.id}
+              className={local.materielTete}
+              onClick={() => setMaterielOuvert((v) => !v)}
+              aria-expanded={materielOuvert}
             >
-              {HABILLAGE[famille.id].photo !== undefined && (
-                <span className={local.bannierePhoto} aria-hidden="true">
-                  <Visuel nom={HABILLAGE[famille.id].photo!} sizes="100vw" />
-                </span>
-              )}
-              <span className={local.banniereVoile} aria-hidden="true" />
-              {/* ME, MYSELF & I n'est jamais « à venir » : on y importe dès aujourd'hui. */}
-              {!perso && programmes.every((p) => p.statut === 'a-venir') && (
-                <span className={local.banniereBadge}>À venir</span>
-              )}
-              <span className={local.banniereTexte}>
-                <span className={local.nomFamille}>{famille.nom}</span>
-                {famille.sousTitre && <span className={local.sousTitre}>{famille.sousTitre}</span>}
-                <span className={local.barres} aria-hidden="true">
-                  <i />
-                  <i />
-                  <i />
-                </span>
+              <span>
+                {nbPrerequis > 0 && nbMateriel > 0
+                  ? 'Prérequis et matériel'
+                  : nbMateriel > 0
+                    ? 'Matériel à prévoir'
+                    : 'Prérequis'}
               </span>
-              <span className={local.banniereChevron} aria-hidden="true">
-                <Icon
-                  name={familleOuverte === famille.id ? 'chevron-up' : 'arrow-right'}
-                  size="18px"
-                />
+              <span className={local.materielCompte}>
+                {nbPrerequis > 0 && nbMateriel > 0
+                  ? `${nbPrerequis} + ${nbMateriel}`
+                  : `${nbPrerequis + nbMateriel}`}
               </span>
+              <Icon name={materielOuvert ? 'chevron-up' : 'chevron-down'} size="16px" />
             </button>
-
-            {familleOuverte === famille.id && (
-              <div className={local.corpsFamille}>
-                <p className={styles.cardSub}>{famille.resume}</p>
-
-                {perso && (
-                  <ImportProgramme
-                    onImporte={(cle) => {
-                      setDeplie(cle);
-                    }}
-                  />
-                )}
-
-                {perso && memoire.etat === 'erreur' && (
-                  <p className={persoStyles.erreurMemoire} role="alert">
-                    Tes programmes importés n’ont pas pu être lus.{' '}
-                    <button
-                      type="button"
-                      className={persoStyles.secondaire}
-                      onClick={() => void hydraterProgrammesImportes()}
-                    >
-                      Réessayer
-                    </button>
-                  </p>
-                )}
-
-                {programmes.length === 0 && (
-                  <p className={local.rien}>
-                    {perso
-                      ? 'Aucun programme importé pour l’instant.'
-                      : 'Aucun programme pour l’instant.'}
-                  </p>
-                )}
-
-                {/* L'ordre conseillé se DIT, pour qu'un numéro ne se lise pas
-                  comme un verrou : chacun se démarre librement. */}
-                {famille.ordreConseille && (
-                  <p className={local.ordreConseille}>Ordre conseillé, pas obligatoire</p>
-                )}
-
-                <ul className={local.liste}>
-                  {programmes.map((p, rang) => {
-                    const action = actionPour(p, cycles);
-                    const ouvert = deplie === p.id;
-                    /*
-                     * Une famille en PARCOURS (POWER : six étapes sur 52
-                     * semaines) numérote ses étapes et montre, sur chaque
-                     * ligne, si elle est ouverte ou ce qui la débloque —
-                     * comme le schéma de Guillaume. Les autres familles
-                     * gardent leur liste simple.
-                     */
-                    const enParcours = programmes.some((x) => x.deblocage);
-                    const acces = enParcours ? accesProgramme(p, cycles) : null;
-                    return (
-                      <li key={p.id} className={local.ligne}>
-                        <button
-                          type="button"
-                          className={local.titreLigne}
-                          onClick={() => setDeplie(ouvert ? null : p.id)}
-                          aria-expanded={ouvert}
-                        >
-                          {(enParcours || famille.ordreConseille) && (
-                            <span className={local.etape}>{rang + 1}</span>
-                          )}
-                          {/* Dans la famille, son nom est déjà dit : « CYCLE 1 » plutôt
-                            que « POWER CYCLE 1 », qui passait sur deux lignes. */}
-                          {/* Nom et durée ensemble : si la ligne manque de place,
-                            la durée passe dessous au lieu de couper le nom
-                            (« TRANSITION / 2 » à 375 px). */}
-                          <span className={local.nomDuree}>
-                            <span className={local.nom}>
-                              {p.nom.startsWith(`${famille.nom} `)
-                                ? p.nom.slice(famille.nom.length + 1)
-                                : p.nom}
-                            </span>
-                            <span className={local.duree}>{p.dureeSemaines} semaines</span>
-                          </span>
-                          <span
-                            className={`${local.etat} ${p.statut === 'disponible' ? local.dispo : ''}`}
-                          >
-                            {p.statut === 'disponible' ? 'Disponible' : 'À venir'}
-                          </span>
-                          <Icon name={ouvert ? 'chevron-up' : 'chevron-down'} size="16px" />
-                        </button>
-                        {acces && (
-                          <p className={`${local.badge} ${acces.ouvert ? local.badgeOuvert : ''}`}>
-                            <span aria-hidden="true">{acces.ouvert ? '✓' : '🔒'}</span>
-                            {acces.badge}
-                          </p>
-                        )}
-
-                        {ouvert && (
-                          <div className={local.details}>
-                            <p className={local.resume}>{p.resume}</p>
-
-                            {p.objectifs.length > 0 && (
-                              <>
-                                <h3 className={local.sousSection}>Objectifs</h3>
-                                <ul className={local.puces}>
-                                  {p.objectifs.map((o) => (
-                                    <li key={o}>{o}</li>
-                                  ))}
-                                </ul>
-                              </>
-                            )}
-
-                            {p.materiel && p.materiel.length > 0 && (
-                              /*
-                               * Le matériel à prévoir, AVANT de démarrer : de
-                               * quoi acheter une ceinture de lest à temps plutôt
-                               * que de la découvrir en semaine 1.
-                               */
-                              <div className={local.materielBloc}>
-                                <button
-                                  type="button"
-                                  className={local.materielTete}
-                                  onClick={() => setMaterielOuvert((v) => !v)}
-                                  aria-expanded={materielOuvert}
-                                >
-                                  <span>Matériel à prévoir</span>
-                                  <span className={local.materielCompte}>
-                                    {p.materiel.length} objets
-                                  </span>
-                                  <Icon
-                                    name={materielOuvert ? 'chevron-up' : 'chevron-down'}
-                                    size="16px"
-                                  />
-                                </button>
-                                {materielOuvert && (
-                                  <ul className={local.materiel}>
-                                    {p.materiel.map((m) => (
-                                      <li key={m.objet}>
-                                        <b>{m.objet}</b>
-                                        <span>{m.usage}</span>
-                                        {m.sinon && (
-                                          <span className={local.sinon}>Sinon : {m.sinon}</span>
-                                        )}
-                                      </li>
-                                    ))}
-                                  </ul>
-                                )}
-                              </div>
-                            )}
-
-                            {p.prerequis.length > 0 && (
-                              <>
-                                <h3 className={local.sousSection}>Prérequis</h3>
-                                <ul className={local.puces}>
-                                  {p.prerequis.map((o) => (
-                                    <li key={o}>{o}</li>
-                                  ))}
-                                </ul>
-                              </>
-                            )}
-
-                            {action !== 'aucune' && aConfirmer?.id !== p.id && (
-                              <button
-                                type="button"
-                                className={local.action}
-                                onClick={() => void agir(p, action)}
-                              >
-                                {LIBELLE[action]}
-                              </button>
-                            )}
-
-                            {aConfirmer?.id === p.id && (
-                              <div className={local.confirme}>
-                                <p>
-                                  Un nouveau cycle s’ouvrira, vide. Ton cycle précédent garde toutes
-                                  ses séances et toutes ses charges — il reste consultable.
-                                </p>
-                                <div className={local.boutons}>
-                                  <button
-                                    type="button"
-                                    className={local.action}
-                                    onClick={() => void agir(p, 'recommencer')}
-                                  >
-                                    Ouvrir un nouveau cycle
-                                  </button>
-                                  <button
-                                    type="button"
-                                    className={local.annuler}
-                                    onClick={() => setAConfirmer(null)}
-                                  >
-                                    Annuler
-                                  </button>
-                                </div>
-                              </div>
-                            )}
-
-                            {perso && ligneImportee(p.id) !== null && (
-                              <DetailsImporte row={ligneImportee(p.id)!} />
-                            )}
-
-                            {/* Le combiné d'évaluation : il se fait AVANT le
-                              programme, et reste accessible même quand le
-                              programme est encore à venir. */}
-                            {p.combineAvant && (
-                              <>
-                                <button
-                                  type="button"
-                                  className={local.action}
-                                  onClick={() => {
-                                    window.location.hash = '#/evaluation';
-                                  }}
-                                >
-                                  Combiné d’évaluation
-                                </button>
-                                <p className={local.resume}>
-                                  {p.nom} démarre après ce combiné : développé couché, tirage
-                                  vertical, squat, push press.
-                                </p>
-                              </>
-                            )}
-
-                            {action === 'aucune' && p.apercu !== undefined && (
-                              /*
-                              L'aperçu ouvre les écrans en lecture seule. Il ne
-                              crée aucun cycle : c'est pour regarder, pas pour
-                              démarrer, et la phrase le dit.
-                            */
-                              <>
-                                <button
-                                  type="button"
-                                  className={local.action}
-                                  onClick={() => {
-                                    window.location.hash = p.apercu!;
-                                  }}
-                                >
-                                  Voir l’aperçu
-                                </button>
-                                <p className={local.rien}>
-                                  Aperçu : rien n’est encore enregistré. Ce programme n’est pas
-                                  encore jouable dans l’application.
-                                </p>
-                              </>
-                            )}
-
-                            {action === 'aucune' && p.apercu === undefined && (
-                              <p className={local.rien}>
-                                Ce programme n’est pas encore jouable dans l’application.
-                              </p>
-                            )}
-                          </div>
-                        )}
-                      </li>
-                    );
-                  })}
-                </ul>
-
-                {/* Les versions archivées : hors de la liste, jamais perdues. */}
-                {perso && memoire.programmes.some((r) => r.archive) && (
-                  <div className={persoStyles.archives}>
-                    <h3 className={local.sousSection}>Archivés</h3>
-                    <ul className={local.liste}>
-                      {memoire.programmes
-                        .filter((r) => r.archive)
-                        .map((r) => (
-                          <li key={r.cle} className={local.ligne}>
-                            <p className={local.nom}>{r.nom}</p>
-                            <DetailsImporte row={r} />
-                          </li>
-                        ))}
+            {materielOuvert && (
+              <div className={local.materielCorps}>
+                {nbPrerequis > 0 && (
+                  <>
+                    <h3 className={local.sousSection}>Prérequis</h3>
+                    <ul className={local.puces}>
+                      {p.prerequis.map((o) => (
+                        <li key={o}>{o}</li>
+                      ))}
                     </ul>
-                  </div>
+                  </>
+                )}
+                {nbMateriel > 0 && (
+                  <>
+                    <h3 className={local.sousSection}>Matériel à prévoir</h3>
+                    <ul className={local.materiel}>
+                      {p.materiel!.map((m) => (
+                        <li key={m.objet}>
+                          <b>{m.objet}</b>
+                          <span>{m.usage}</span>
+                          {m.sinon && <span className={local.sinon}>Sinon : {m.sinon}</span>}
+                        </li>
+                      ))}
+                    </ul>
+                  </>
                 )}
               </div>
             )}
-          </section>
-        );
-      })}
+          </div>
+        )}
+
+        {action !== 'aucune' && aConfirmer?.id !== p.id && (
+          <button type="button" className={local.action} onClick={() => void agir(p, action)}>
+            {action === 'reprendre' && <Icon name="play" size="18px" />}
+            {LIBELLE[action]}
+          </button>
+        )}
+
+        {aConfirmer?.id === p.id && (
+          <div className={local.confirme}>
+            <p>
+              Un nouveau cycle s’ouvrira, vide. Ton cycle précédent garde toutes ses séances et
+              toutes ses charges — il reste consultable.
+            </p>
+            <div className={local.boutons}>
+              <button
+                type="button"
+                className={local.action}
+                onClick={() => void agir(p, 'recommencer')}
+              >
+                Ouvrir un nouveau cycle
+              </button>
+              <button type="button" className={local.annuler} onClick={() => setAConfirmer(null)}>
+                Annuler
+              </button>
+            </div>
+          </div>
+        )}
+
+        {perso && ligneImportee(p.id) !== null && <DetailsImporte row={ligneImportee(p.id)!} />}
+
+        {/* Le combiné d'évaluation : il se fait AVANT le programme, et reste
+            accessible même quand le programme est encore à venir. */}
+        {p.combineAvant && (
+          <>
+            <button
+              type="button"
+              className={`${local.action} ${local.actionSecondaire}`}
+              onClick={() => {
+                window.location.hash = '#/evaluation';
+              }}
+            >
+              Combiné d’évaluation
+            </button>
+            <p className={local.resume}>
+              {p.nom} démarre après ce combiné : développé couché, tirage vertical, squat, push
+              press.
+            </p>
+          </>
+        )}
+
+        {action === 'aucune' && p.apercu !== undefined && (
+          /* L'aperçu ouvre les écrans en lecture seule. Il ne crée aucun
+             cycle : c'est pour regarder, pas pour démarrer, et la phrase le dit. */
+          <>
+            <button
+              type="button"
+              className={local.action}
+              onClick={() => {
+                window.location.hash = p.apercu!;
+              }}
+            >
+              Voir l’aperçu
+            </button>
+            <p className={local.rien}>
+              Aperçu : rien n’est encore enregistré. Ce programme n’est pas encore jouable dans
+              l’application.
+            </p>
+          </>
+        )}
+
+        {action === 'aucune' && p.apercu === undefined && (
+          <p className={local.rien}>Ce programme n’est pas encore jouable dans l’application.</p>
+        )}
+      </div>
+    );
+  };
+
+  const ligne = (p: ProgrammeDefinition, enVedette: boolean) => {
+    const rang = programmes.indexOf(p);
+    const action = actionPour(p, cycles);
+    const ouvert = enVedette || deplie === p.id;
+    const acces = enParcours ? accesProgramme(p, cycles) : null;
+    const entete = (
+      <>
+        {(enParcours || famille.ordreConseille) && (
+          <span className={`${local.etape} ${enVedette ? local.etapeVedette : ''}`}>
+            {rang + 1}
+          </span>
+        )}
+        {/* Dans la famille, son nom est déjà dit : « CYCLE 1 » plutôt que
+            « POWER CYCLE 1 ». Nom et durée ensemble : si la ligne manque de
+            place, la durée passe dessous au lieu de couper le nom. */}
+        <span className={local.nomDuree}>
+          <span className={local.nom}>
+            {p.nom.startsWith(`${famille.nom} `) ? p.nom.slice(famille.nom.length + 1) : p.nom}
+          </span>
+          <span className={local.duree}>{p.dureeSemaines} semaines</span>
+        </span>
+        <span className={`${local.etat} ${p.statut === 'disponible' ? local.dispo : ''}`}>
+          {p.statut === 'disponible' ? 'Disponible' : 'À venir'}
+        </span>
+      </>
+    );
+    return (
+      <li key={p.id} className={`${local.ligne} ${enVedette ? local.vedette : ''}`}>
+        {enVedette ? (
+          <div className={local.titreLigne}>{entete}</div>
+        ) : (
+          <button
+            type="button"
+            className={local.titreLigne}
+            onClick={() => setDeplie(ouvert ? null : p.id)}
+            aria-expanded={ouvert}
+          >
+            {entete}
+            <Icon name={ouvert ? 'chevron-up' : 'chevron-down'} size="16px" />
+          </button>
+        )}
+        {acces && (
+          <p className={`${local.badge} ${acces.ouvert ? local.badgeOuvert : ''}`}>
+            <span aria-hidden="true">{acces.ouvert ? '✓' : '🔒'}</span>
+            {acces.badge}
+          </p>
+        )}
+        {ouvert && details(p, action)}
+      </li>
+    );
+  };
+
+  return (
+    /*
+     * L'écran prend les couleurs de SA famille (cobalt, rouge, rose) : le
+     * bouton « Reprendre » de POWER est cobalt, pas charbon. ME, MYSELF & I
+     * n'a pas de thème propre : elle garde celui de la plateforme.
+     */
+    <div className={styles.screen} data-theme={THEME_FAMILLE[famille.id]}>
+      <header
+        className={local.heroFamille}
+        style={{ '--teinte': HABILLAGE[famille.id].teinte } as CSSProperties}
+      >
+        {HABILLAGE[famille.id].photo !== undefined && (
+          <span className={local.bannierePhoto} aria-hidden="true">
+            <Visuel nom={HABILLAGE[famille.id].photo!} sizes="100vw" prioritaire />
+          </span>
+        )}
+        <span className={local.heroVoile} aria-hidden="true" />
+        <a className={local.retourFamilles} href="#/catalogue">
+          <Icon name="arrow-left" size="18px" />
+          Programmes
+        </a>
+        <div className={local.heroTexte}>
+          {famille.sousTitre && <p className={local.heroSurTitre}>{famille.sousTitre}</p>}
+          <h1 className={local.heroNom}>{famille.nom}</h1>
+          <p className={local.heroCompte}>{compteFamille(famille, programmes)}</p>
+        </div>
+      </header>
+
+      <section id={`famille-${famille.id}`} className={local.corpsFamille}>
+        <p className={local.resumeFamille}>{famille.resume}</p>
+
+        {perso && (
+          <ImportProgramme
+            onImporte={(cle) => {
+              setDeplie(cle);
+            }}
+          />
+        )}
+
+        {perso && memoire.etat === 'erreur' && (
+          <p className={persoStyles.erreurMemoire} role="alert">
+            Tes programmes importés n’ont pas pu être lus.{' '}
+            <button
+              type="button"
+              className={persoStyles.secondaire}
+              onClick={() => void hydraterProgrammesImportes()}
+            >
+              Réessayer
+            </button>
+          </p>
+        )}
+
+        {programmes.length === 0 && (
+          <p className={local.rien}>
+            {perso ? 'Aucun programme importé pour l’instant.' : 'Aucun programme pour l’instant.'}
+          </p>
+        )}
+
+        {/* L'ordre conseillé se DIT, pour qu'un numéro ne se lise pas comme un
+            verrou : chacun se démarre librement. */}
+        {famille.ordreConseille && (
+          <p className={local.ordreConseille}>Ordre conseillé, pas obligatoire</p>
+        )}
+
+        {vedette !== null && <ul className={local.liste}>{ligne(vedette, true)}</ul>}
+
+        {autres.length > 0 && (
+          <>
+            {vedette !== null && (
+              <h2 className={local.titreAutres}>
+                {enParcours ? 'Les autres étapes' : 'Les autres programmes'}
+              </h2>
+            )}
+            <ul className={local.liste}>{autres.map((p) => ligne(p, false))}</ul>
+          </>
+        )}
+
+        {/* Les versions archivées : hors de la liste, jamais perdues. */}
+        {perso && memoire.programmes.some((r) => r.archive) && (
+          <div className={persoStyles.archives}>
+            <h3 className={local.sousSection}>Archivés</h3>
+            <ul className={local.liste}>
+              {memoire.programmes
+                .filter((r) => r.archive)
+                .map((r) => (
+                  <li key={r.cle} className={local.ligne}>
+                    <p className={local.nom}>{r.nom}</p>
+                    <DetailsImporte row={r} />
+                  </li>
+                ))}
+            </ul>
+          </div>
+        )}
+      </section>
     </div>
   );
 }
