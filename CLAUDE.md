@@ -56,6 +56,16 @@ en IA. **Réponds toujours en français.**
 > premier qu'on peut démarrer, est déplié d'office en tête ; jamais un « à
 > venir ». Prérequis et matériel dans un seul repli. Aucune règle du
 > catalogue n'a changé. `screens/catalogueFamilles.test.tsx`.
+> **Lot 6 : muscles et erreurs des 38 planches POWER 12.** Texte transcrit
+> tel quel du tableau « MAJK — Fiches techniques POWER 12 » (révision 5,
+> toutes les lignes « Validé » par Guillaume) dans
+> `data/musclesErreursPower12.ts` : le tableau fait foi, une correction se
+> fait là-bas puis ici. Rattaché par `def()` d'`exercises.ts`, seulement
+> quand le mouvement a une planche ; les tests du combiné empruntent le
+> texte de leur mouvement (`MOUVEMENT_DU_TEST`) ; MASS n'en a pas. Affiché
+> sous la planche ouverte (`InfosDeLaFiche`) : muscles principaux à
+> l'accent, secondaires neutres, erreurs à puce rouge, « C'est compris — aux
+> séries ». Section vide = pas de section. `musclesErreursPower12.test.tsx`.
 
 ---
 
