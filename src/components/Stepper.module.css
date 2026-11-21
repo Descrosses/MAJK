@@ -1,0 +1,176 @@
+.stepper {
+  flex: 1;
+  min-width: 0;
+}
+
+.label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  text-align: center;
+  margin-bottom: 4px;
+}
+
+.controls {
+  display: flex;
+  align-items: stretch;
+  background: var(--surface-2);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.button {
+  flex: 0 0 var(--tap);
+  width: var(--tap);
+  height: var(--tap);
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--ink);
+  background: var(--surface-3);
+}
+
+.button:active {
+  background: var(--accent);
+  color: var(--ink-on-accent);
+}
+
+.button:disabled {
+  color: var(--ink-3);
+  opacity: 0.45;
+}
+
+.value {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  font-family: var(--font-cond);
+  font-size: 1.5rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.accent .value {
+  color: var(--accent-ink);
+}
+
+/*
+ * Saisie clavier. La valeur devient une cible tactile : le crayon dit qu'on
+ * peut taper dessus, sans voler de place au chiffre (il reste centré, le
+ * crayon est posé à droite en discret).
+ */
+/*
+ * Le crayon est un FRÈRE de la valeur, dans le même flex, et non un élément
+ * posé en absolu dans le coin droit.
+ *
+ * En absolu, il ne réservait aucune place : dès que la boîte se resserrait —
+ * les paires « reps + charge » côte à côte ne laissent que quelques dizaines
+ * de pixels à chacune — la valeur passait dessous. « PDC » s'affichait avec
+ * un crayon à cheval sur le C, sur chaque série de chaque exercice au poids
+ * du corps.
+ */
+.valueEditable {
+  width: 100%;
+  padding: 0 8px;
+  border-radius: 0;
+}
+
+.valueEditable:active {
+  background: var(--surface-3);
+}
+
+.pencil {
+  flex: none;
+  font-size: 0.8125rem;
+  line-height: 1;
+  color: var(--ink-3);
+}
+
+/* Le champ de saisie garde exactement la boîte de la valeur qu'il remplace :
+   rien ne bouge à l'écran quand le clavier s'ouvre. */
+.input {
+  flex: 1;
+  min-width: 0;
+  height: var(--tap);
+  padding: 0 8px;
+  border: 0;
+  border-radius: 0;
+  background: var(--surface-3);
+  text-align: center;
+  font-family: var(--font-cond);
+  font-size: 1.5rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.accent .input {
+  color: var(--accent-ink);
+}
+
+.unit {
+  color: var(--ink-2);
+}
+
+/*
+ * Variante compacte : trois sélecteurs côte à côte sur un écran de 390 px.
+ * Les boutons perdent de la largeur (32 px) mais gardent toute leur hauteur ;
+ * le crayon de saisie au clavier disparaît faute de place, la valeur reste
+ * touchable pour ouvrir le clavier.
+ */
+.compact .button {
+  flex: 0 0 32px;
+  width: 32px;
+  min-width: 32px;
+  font-size: 1.25rem;
+}
+
+.compact .value,
+.compact .input {
+  font-size: 1.25rem;
+}
+
+.compact .valueEditable {
+  padding: 0 2px;
+  min-width: 0;
+}
+
+/* La valeur garde au moins la largeur de son chiffre : elle ne déborde pas. */
+.compact .value {
+  min-width: max-content;
+  padding: 0 6px;
+}
+
+/*
+ * Une valeur vide (« — ») est plus étroite qu'un chiffre : sans plancher, sa
+ * zone de saisie au clavier tombait sous les 32 px.
+ */
+.compact .valueEditable {
+  min-width: max-content;
+}
+
+.compact .valueEditable::before,
+.compact .valueEditable::after {
+  content: '';
+  flex: 0 0 4px;
+}
+
+.compact .pencil {
+  display: none;
+}
+
+.compact .label {
+  letter-spacing: 0.02em;
+}
+
+/*
+ * MASS : la valeur saisie est blanche sur la maquette (78,7 comme les kilos
+ * de la séance), pas rouge. Le rouge y est réservé aux boutons et aux pavés.
+ */
+:global([data-theme='mass']) .accent .value,
+:global([data-theme='mass']) .accent .input {
+  color: var(--ink);
+}

@@ -1,0 +1,518 @@
+/*
+ * Écran Aujourd'hui — refonte NFL Classic Premium.
+ *
+ * Fichier séparé, comme pour l'écran Semaine, et pour la même raison :
+ * `Screens.module.css` est partagé par Progression, Combine, Nutrition et
+ * Réglages, qui ne sont pas encore refaits. Y toucher les changerait tous
+ * d'un coup, sans vérification.
+ *
+ * Règle tenue partout ici : aucune photo sous un champ de saisie, sous une
+ * valeur d'entraînement ou sous un bouton. Les photos vivent dans l'en-tête,
+ * derrière un voile, et nulle part ailleurs.
+ */
+
+.screen {
+  padding: 0 0 var(--bottom-space);
+}
+
+/* ----------------------------------------------------- bloc d'ouverture -- */
+
+/*
+ * La ligne de méta sous le titre : intensité, semaine, jour, durée.
+ * Elle est DANS l'en-tête, donc sur la photo : d'où le fond semi-opaque de
+ * chaque pastille, qui lui redonne son propre contraste quel que soit le
+ * pixel de stade qui passe derrière.
+ */
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.metaItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  /* Le même voile que l'en-tête : c'est le fond de l'écran vu à travers la
+     photo, pas une couleur en soi. En thème clair il devient crème. */
+  background: rgb(var(--voile) / 72%);
+  color: var(--ink-2);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.metaItem b {
+  color: var(--ink);
+  font-weight: 700;
+}
+
+/*
+ * La pastille d'intensité porte la couleur du bloc — par une PASTILLE, pas
+ * par un aplat.
+ *
+ * Remplie, elle se lisait comme un second bouton à côté du rouge d'action :
+ * deux aplats chauds côte à côte, dont un seul se touche. La couleur du bloc
+ * reste donc graphique, comme sur l'écran Semaine, et le mot garde le
+ * contraste du texte blanc.
+ */
+.metaBloc {
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.metaBloc::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--bloc, var(--ink-3));
+}
+
+/* Le texte libre de l'en-tête (« prochaine séance dans 2 jours »). */
+.lead {
+  margin-top: 10px;
+  max-width: 34ch;
+  color: var(--ink-2);
+  font-size: var(--fs-small);
+  line-height: 1.45;
+}
+
+.lead b {
+  color: var(--ink);
+}
+
+/* ------------------------------------------------------------- actions -- */
+
+/*
+ * L'action principale. Pleine largeur, rouge, haute : c'est le seul bouton de
+ * l'écran qui doit se trouver sans chercher, pouce en main, sac posé.
+ */
+.primary {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: calc(100% - 2 * var(--pad));
+  min-height: 62px;
+  margin: var(--gap) var(--pad) 0;
+  border-radius: var(--radius);
+  background: linear-gradient(180deg, var(--accent-bright) 0%, var(--accent) 100%);
+  color: var(--ink-on-accent);
+  font-family: var(--font-cond);
+  font-size: 1.3125rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  box-shadow: var(--shadow-action);
+}
+
+.primary:active {
+  background: var(--accent-deep);
+  box-shadow: none;
+}
+
+.secondary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: calc(100% - 2 * var(--pad));
+  min-height: var(--tap);
+  margin: 10px var(--pad) 0;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--ink);
+  font-weight: 700;
+  font-size: var(--fs-small);
+}
+
+.secondary:active {
+  background: var(--surface-2);
+}
+
+/* ------------------------------------------------------ carte nutrition -- */
+
+.nutriCard {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: calc(100% - 2 * var(--pad));
+  margin: var(--gap) var(--pad) 0;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--accent);
+  border-radius: var(--radius);
+  background: linear-gradient(135deg, var(--surface) 0%, var(--bg-2) 100%);
+  box-shadow: var(--shadow-card);
+  text-align: left;
+}
+
+.nutriCard:active {
+  background: var(--surface-2);
+}
+
+.nutriIcon {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-3);
+  color: var(--ink);
+}
+
+.nutriText {
+  flex: 1;
+  min-width: 0;
+}
+
+.nutriText b {
+  display: block;
+  font-family: var(--font-cond);
+  font-size: 1.0625rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+}
+
+.nutriText span {
+  display: block;
+  margin-top: 2px;
+  font-size: 0.8125rem;
+  color: var(--ink-2);
+}
+
+.nutriChevron {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  color: var(--ink-3);
+}
+
+/* ------------------------------------------------------------- alertes -- */
+
+/*
+ * Une alerte n'est PAS un bouton rouge, et ne doit jamais s'y confondre.
+ * Elle se distingue par trois choses à la fois : son filet de gauche, son
+ * pictogramme, et son fond de carte plutôt qu'un aplat. Le rouge d'action
+ * reste réservé au bouton plein.
+ */
+.alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  width: calc(100% - 2 * var(--pad));
+  margin: var(--gap) var(--pad) 0;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--orange);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--ink-2);
+  font-size: var(--fs-small);
+  line-height: 1.45;
+  text-align: left;
+}
+
+.alertIcon {
+  flex: none;
+  margin-top: 1px;
+  color: var(--orange);
+}
+
+.alertRouge {
+  border-left-color: var(--rouge);
+}
+
+.alertRouge .alertIcon {
+  color: var(--rouge);
+}
+
+/* L'alerte qui pose une question : texte, puis deux réponses. */
+.alertQuestion {
+  align-items: flex-start;
+}
+
+.alertCorps {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
+}
+
+.alertCorps p {
+  margin: 0;
+}
+
+.alertBoutons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.alertOui,
+.alertNon {
+  min-height: var(--tap);
+  border-radius: var(--radius-sm);
+  font-weight: 700;
+  font-size: 0.9375rem;
+}
+
+.alertOui {
+  background: var(--accent);
+  color: var(--ink-on-accent);
+}
+
+.alertNon {
+  border: 1px solid var(--line-strong);
+  background: var(--surface-2);
+  color: var(--ink);
+}
+
+/* « Changer d'avis » : une commande, donc 44 px au toucher. */
+.alertLien {
+  min-height: 44px;
+  padding: 0 4px;
+  background: none;
+  border: 0;
+  color: var(--accent-ink);
+  font-weight: 700;
+  text-decoration: underline;
+}
+
+.alertVert {
+  border-left-color: var(--vert);
+}
+
+.alertVert .alertIcon {
+  color: var(--vert);
+}
+
+/* --------------------------------------------------- premier démarrage -- */
+
+.card {
+  margin: var(--gap) var(--pad);
+  padding: var(--pad);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
+}
+
+.label {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--ink-3);
+  font-family: var(--font-cond);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.input {
+  width: 100%;
+  border-color: var(--line-strong);
+  background: var(--bg-2);
+}
+
+.fieldHint {
+  margin-top: 8px;
+  color: var(--ink-3);
+  font-size: 0.8125rem;
+  line-height: 1.45;
+}
+
+/* ------------------------------------------- retour vers la plateforme -- */
+
+/*
+ * Le chemin de remontée depuis un programme vers Dcross-fit. Volontairement
+ * sobre : il ne doit pas concurrencer l'action du jour, qui est juste en
+ * dessous et qui est la vraie raison d'ouvrir l'application.
+ */
+
+/* --------------------------------------------------------- au programme -- */
+
+/*
+ * La séance annoncée avant d'y entrer, exercice par exercice.
+ *
+ * Aucune couleur nouvelle : la carte est la carte commune, les numéros sont
+ * en --accent-ink (le rouge éclairci prévu pour écrire en accent), les
+ * étiquettes en --ink-3. Chaque programme la reprend dans son thème sans rien
+ * déclarer.
+ *
+ * Ce n'est pas un bouton : rien ici ne se touche, la séance s'ouvre avec le
+ * bouton rouge au-dessus. Une liste qui aurait l'air cliquable sans l'être
+ * coûterait des appuis pour rien, en salle.
+ */
+.apercu {
+  composes: carte from '../styles/cartes.module.css';
+  margin: var(--gap) var(--pad) 0;
+  padding: 14px var(--pad) 10px;
+}
+
+.apercuTete {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.apercuTitre {
+  composes: carteTitre from '../styles/cartes.module.css';
+}
+
+.apercuCompte {
+  color: var(--ink-3);
+  font-size: var(--fs-small);
+  white-space: nowrap;
+}
+
+.apercuListe {
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.apercuLigne {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  min-height: var(--tap);
+  padding: 6px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.apercuLigne:last-child {
+  border-bottom: 0;
+}
+
+.apercuNumero {
+  color: var(--accent-ink-fort);
+  font-family: var(--font-cond);
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.apercuNom {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  color: var(--ink);
+  font-weight: 600;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.apercuEtiquette {
+  margin-top: 2px;
+  color: var(--ink-3);
+  font-size: var(--fs-micro);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+/*
+ * La prescription ne se coupe pas au milieu (« 4 × 6 × » puis « 120 kg ») ;
+ * quand elle est longue, c'est le nom qui cède de la place, pas elle.
+ */
+.apercuPrescription {
+  max-width: 48vw;
+  color: var(--ink);
+  font-family: var(--font-cond);
+  font-size: 1.125rem;
+  font-weight: 700;
+  text-align: right;
+}
+
+.apercuNote {
+  margin-top: 8px;
+  color: var(--ink-2);
+  font-size: var(--fs-small);
+}
+
+/*
+ * MASS — relevés sur la maquette de l'Accueil (14 novembre).
+ *
+ * Bouton : dégradé du rouge #d90215 au bordeaux #86030d, liseré clair en haut
+ * et lueur rouge autour. Blanc sur le plus clair des deux : 5,5:1.
+ */
+:global([data-theme='mass']) .primary {
+  border: 1px solid #e8303a;
+  background: linear-gradient(180deg, #d90215 0%, #bd0717 45%, #86030d 100%);
+  font-style: italic;
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 22%),
+    0 0 18px rgb(217 2 21 / 45%),
+    0 6px 16px rgb(0 0 0 / 50%);
+}
+
+:global([data-theme='mass']) .primary:active {
+  background: #86030d;
+}
+
+/* Les numéros : blancs dans un pavé rouge incliné, plus des chiffres rouges. */
+:global([data-theme='mass']) .apercuNumero {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 22px;
+  border-radius: 3px;
+  background: linear-gradient(180deg, #d90215 0%, #a3060f 100%);
+  color: #fff;
+  font-size: 1rem;
+  font-style: italic;
+  line-height: 1;
+  transform: skewX(-8deg);
+}
+
+:global([data-theme='mass']) .apercuTitre {
+  font-style: italic;
+}
+
+/*
+ * Le titre du jour, quand l'en-tête est permanent (MASS) : « Ça commence
+ * bientôt », le nom de la séance, « Repos ». Il ouvre la zone d'information,
+ * sous l'en-tête, à la taille d'un titre de carte — plus celle d'une affiche.
+ */
+.titreJour {
+  margin: 2px 0 0;
+  color: var(--ink);
+  font-family: var(--font-cond);
+  font-size: 1.375rem;
+  font-weight: 700;
+  font-style: italic;
+  letter-spacing: 0.02em;
+  line-height: 1.1;
+  text-transform: uppercase;
+}
+
+.titreJour + .lead {
+  margin-top: 4px;
+}
+
+/* MASS — la carte Nutrition (jour de repos) : carte anthracite bordée, plus
+   le filet rouge à gauche de l'ancienne direction (lot C). */
+:global([data-theme='mass']) .nutriCard {
+  border: 1px solid var(--mass-carte-bord);
+  border-radius: 12px;
+  background: var(--mass-carte-fond);
+  box-shadow: var(--mass-liseret);
+}
+
+:global([data-theme='mass']) .nutriIcon {
+  color: var(--mass-rouge);
+}

@@ -1,0 +1,947 @@
+/**
+ * Intégrité du programme transcrit.
+ *
+ * Ces tests ne vérifient pas des valeurs du .md (c'est le rôle de
+ * `mainLiftTable.test.ts`) mais la cohérence interne : pas d'exercice fantôme,
+ * pas d'id dupliqué, pas de repos absurde, pas de règle qui vise un exercice
+ * absent de la séance qu'elle prétend modifier.
+ */
+
+import { readFileSync } from 'node:fs';
+import { describe, expect, it } from 'vitest';
+import { BASE_SESSIONS } from './baseSessions';
+import { BLOCK_RULES, CONTRAST_BY_DAY, DELOAD_CORE, DELOAD_POLICY } from './blockRules';
+import { workLabel } from '../engine/format';
+import { EXERCISES, EXERCISE_IDS } from './exercises';
+import { MAIN_LIFT_TABLE } from './mainLiftTable';
+import { DEFAULT_SETTINGS_ROW } from '../db/db';
+
+/** Du test du combine vers la colonne de MESURES_COMBINE. */
+const MESURE_POUR: Record<string, keyof typeof MESURES_COMBINE> = {
+  'test-squat-1rm': 'back-squat',
+  'test-bench-1rm': 'bench-press',
+  'test-deadlift-1rm': 'deadlift',
+  'test-weighted-pullup-1rm': 'weighted-pullup',
+};
+
+/**
+ * Les départs du §13, tels que le .md les écrit.
+ *
+ * Ils ne vivent plus dans le code applicatif — c'étaient les performances de
+ * Guillaume. Ils restent ici, dans le test, pour vérifier le chemin inverse :
+ * le gain appliqué à ce départ doit redonner la cible écrite dans le .md.
+ *
+ * Les tractions strictes se comptent en répétitions, elles n'ont rien à faire
+ * dans MESURES_COMBINE qui ne contient que des kilos.
+ */
+/**
+ * La ligne du tableau §13 qui porte chaque gain, mot pour mot.
+ *
+ * C'est le contrat entre le code et le document : le .md annonce des
+ * progressions en pourcentage, le code en applique. Si l'un bouge sans
+ * l'autre, ce test tombe.
+ */
+const LIGNE_MD: Record<string, string> = {
+  'test-squat-1rm': '| Back Squat 1RM | +7 à 11 % |',
+  'test-bench-1rm': '| Bench 1RM | +3 à 6 % |',
+  'test-deadlift-1rm': '| Deadlift 1RM | +4 à 7 % |',
+  'test-weighted-pullup-1rm': '| Tractions lestées 1RM | +3 à 5 % |',
+  'test-push-press-1rm': '| Push Press 1RM | +5 à 8 % |',
+  'test-strict-pullup-max': '| Tractions strictes | +11 à 28 % |',
+};
+
+const DEPART_MD: Record<string, number> = {
+  'test-squat-1rm': 110,
+  'test-bench-1rm': 115,
+  'test-deadlift-1rm': 140,
+  'test-weighted-pullup-1rm': 45,
+  'test-strict-pullup-max': 18,
+};
+import {
+  cibleFor,
+  COMBINE_METRICS,
+  SPECIAL_SESSIONS,
+  MESURES_COMBINE,
+  RAMPS,
+  RAMPS_S12,
+  TARGETS_12_WEEKS,
+} from './testSessions';
+import { WARMUPS } from './warmups';
+import {
+  WEEK_BLOCKS,
+  WEEK_DAYS,
+  BLOCKS,
+  SEMAINES,
+  blocDeLaSemaine,
+  joursDeLaSemaine,
+} from './program';
+import { DAY_LABELS, type DayIndex } from './types';
+
+/** Les cinq jours d'entraînement d'une semaine type, dans l'ordre réel. */
+const DAYS: DayIndex[] = [0, 2, 4, 5, 6];
+
+describe('catalogue d’exercices', () => {
+  it('aucun id dupliqué', () => {
+    expect(new Set(EXERCISE_IDS).size).toBe(EXERCISE_IDS.length);
+  });
+
+  it('les ids sont en kebab-case (ils sont gelés, autant qu’ils soient propres)', () => {
+    for (const id of EXERCISE_IDS) expect(id, id).toMatch(/^[a-z0-9]+(-[a-z0-9]+)*$/);
+  });
+
+  it('tout exercice porteur d’un liftId correspond à une ligne du tableau', () => {
+    for (const id of EXERCISE_IDS) {
+      const lift = EXERCISES[id]!.liftId;
+      if (lift) expect(MAIN_LIFT_TABLE[lift], `${id} → ${lift}`).toBeDefined();
+    }
+  });
+
+  /*
+   * L'intention est transcrite du .md, elle n'est pas obligatoire : deux
+   * mouvements n'ont AUCUNE consigne dans le programme. Les forcer à en avoir
+   * une revenait à en inventer, ce qui s'est produit (« Tempo 2-0-1 » sur
+   * l'Incline DB Press, qui n'est écrit nulle part). La liste des exceptions
+   * est donc explicite : en ajouter une doit être un geste conscient.
+   */
+  const SANS_CONSIGNE_DANS_LE_MD = ['incline-db-press', 'one-arm-cable-row'];
+
+  it('chaque exercice a une intention, sauf ceux que le .md laisse muets', () => {
+    for (const id of EXERCISE_IDS) {
+      const attendu = !SANS_CONSIGNE_DANS_LE_MD.includes(id);
+      expect((EXERCISES[id]!.intent ?? '').length > 0, id).toBe(attendu);
+    }
+  });
+
+  it('la règle §5 est rappelée sur tous les mouvements explosifs', () => {
+    const explosifs = EXERCISE_IDS.filter((id) => EXERCISES[id]!.explosive);
+    expect(explosifs.length).toBeGreaterThan(0);
+    for (const id of explosifs) {
+      expect(EXERCISES[id]!.cues?.join(' '), id).toContain('tentative de performance');
+    }
+  });
+});
+
+describe('trames §7', () => {
+  it('couvrent les 5 jours', () => {
+    expect(DAYS.map((d) => BASE_SESSIONS[d]!.day)).toEqual(DAYS);
+  });
+
+  it('ne référencent que des exercices existants', () => {
+    for (const d of DAYS) {
+      for (const slot of BASE_SESSIONS[d]!.slots) {
+        expect(EXERCISES[slot.exId], `${DAY_LABELS[d]} → ${slot.exId}`).toBeDefined();
+      }
+    }
+  });
+
+  it('n’ont pas deux fois le même exercice dans une séance', () => {
+    for (const d of DAYS) {
+      const ids = BASE_SESSIONS[d]!.slots.map((s) => s.exId);
+      expect(new Set(ids).size, DAY_LABELS[d]).toBe(ids.length);
+    }
+  });
+
+  it('le readiness test est prévu les jours jambes uniquement (§4 : lundi, vendredi, samedi)', () => {
+    expect(DAYS.map((d) => BASE_SESSIONS[d]!.readinessTest)).toEqual([
+      true,
+      false,
+      true,
+      true,
+      false,
+    ]);
+  });
+
+  it('un slot piloté par le tableau déclare bien son liftId', () => {
+    for (const d of DAYS) {
+      for (const slot of BASE_SESSIONS[d]!.slots) {
+        const def = EXERCISES[slot.exId]!;
+        if (def.liftId) expect(slot.liftId, `${slot.exId}`).toBe(def.liftId);
+      }
+    }
+  });
+
+  it('les repos sont plausibles (0 à 5 min)', () => {
+    for (const d of DAYS) {
+      for (const slot of BASE_SESSIONS[d]!.slots) {
+        expect(slot.restSec, `${slot.exId}`).toBeGreaterThanOrEqual(0);
+        expect(slot.restSec, `${slot.exId}`).toBeLessThanOrEqual(300);
+      }
+    }
+  });
+
+  it('les repos des lifts lourds respectent §7 et §10', () => {
+    const rest = (d: DayIndex, exId: string) =>
+      BASE_SESSIONS[d]!.slots.find((s) => s.exId === exId)?.restSec;
+    expect(rest(0, 'back-squat')).toBe(210); // lundi, 3 min 30
+    expect(rest(5, 'deadlift')).toBe(210); // samedi, 3 min 30
+    expect(rest(2, 'bench-press')).toBe(180); // mercredi, 3 min
+    expect(rest(2, 'weighted-pullup')).toBe(150); // 2 min 30
+    expect(rest(0, 'rdl')).toBe(150); // 2 min 30
+    expect(rest(4, 'speed-squat')).toBe(60); // vendredi, 60 s en accumulation
+  });
+});
+
+describe('règles de bloc §8', () => {
+  it('ne visent que des exercices existants', () => {
+    for (const set of BLOCK_RULES) {
+      for (const rule of set.rules) {
+        const id = rule.op === 'insert' ? rule.slot.exId : rule.exId;
+        expect(EXERCISES[id], `${set.block} → ${id}`).toBeDefined();
+      }
+    }
+  });
+
+  it('ne visent que des exercices présents dans la trame du jour', () => {
+    for (const set of BLOCK_RULES) {
+      if (set.day === undefined) continue;
+      const present = new Set(BASE_SESSIONS[set.day]!.slots.map((s) => s.exId));
+      for (const rule of set.rules) {
+        if (rule.op === 'insert') continue;
+        expect(present.has(rule.exId), `${set.block} ${DAY_LABELS[set.day]} → ${rule.exId}`).toBe(
+          true,
+        );
+      }
+    }
+  });
+
+  it('le contraste S9-11 couvre lundi, mercredi et samedi (§8)', () => {
+    expect(Object.keys(CONTRAST_BY_DAY).map(Number).sort()).toEqual([0, 2, 5]);
+    for (const [day, spec] of Object.entries(CONTRAST_BY_DAY)) {
+      expect(EXERCISES[spec!.heavy], `lourd ${day}`).toBeDefined();
+      expect(EXERCISES[spec!.explosive], `explosif ${day}`).toBeDefined();
+    }
+  });
+
+  it('l’explosif du contraste est retiré du début de séance', () => {
+    for (const [dayStr, spec] of Object.entries(CONTRAST_BY_DAY)) {
+      const day = Number(dayStr) as DayIndex;
+      const rules = BLOCK_RULES.filter((r) => r.block === 'power' && r.day === day).flatMap(
+        (r) => r.rules,
+      );
+      const removed = rules.some((r) => r.op === 'remove' && r.exId === spec!.explosive);
+      expect(
+        removed,
+        `${DAY_LABELS[day]} : ${spec!.explosive} doit sortir du début de séance`,
+      ).toBe(true);
+    }
+  });
+
+  it('le deload retire le Nordic et le conditioning (§8)', () => {
+    expect(DELOAD_POLICY.removeExIds).toContain('nordic-curl');
+    expect(DELOAD_POLICY.removeExIds).toContain('conditioning');
+    expect(DELOAD_POLICY.maxRPE).toBe(6);
+    expect(DELOAD_POLICY.accessoryLoadFactor).toBe(0.8);
+  });
+});
+
+describe('séances écrites en toutes lettres (§12, §8 S12)', () => {
+  it('ne référencent que des exercices existants', () => {
+    for (const { week, day, blueprint } of SPECIAL_SESSIONS) {
+      for (const slot of blueprint.slots) {
+        expect(EXERCISES[slot.exId], `S${week} ${DAY_LABELS[day]} → ${slot.exId}`).toBeDefined();
+      }
+    }
+  });
+
+  it('le jour déclaré correspond à la trame', () => {
+    for (const { day, blueprint } of SPECIAL_SESSIONS) expect(blueprint.day).toBe(day);
+  });
+
+  it('le combine initial tient entièrement dans la semaine 0, du lundi au samedi', () => {
+    const cases = SPECIAL_SESSIONS.filter((s) => s.blueprint.title.startsWith('Combine initial'));
+    expect(cases.map((s) => [s.week, s.day])).toEqual([
+      [0, 0], // lundi
+      [0, 1], // mardi
+      [0, 3], // jeudi   — le mercredi est un repos
+      [0, 4], // vendredi
+      [0, 5], // samedi  — le dimanche aussi
+    ]);
+  });
+
+  /*
+   * La règle qui a produit cette répartition, et la seule chose qui la rend
+   * meilleure que la version à trois jours. Ce test échouera si quelqu'un
+   * resserre le combine sans y penser.
+   */
+  it('jamais deux efforts de tirage ou de préhension à moins de 48 h', () => {
+    const TIRAGE = new Set([
+      'test-weighted-pullup-1rm',
+      'test-deadlift-1rm',
+      'test-strict-pullup-max',
+      'test-leg-raise-max',
+    ]);
+    const jours = SPECIAL_SESSIONS.filter(
+      (s) => s.week === 0 && s.blueprint.slots.some((x) => TIRAGE.has(x.exId)),
+    )
+      .map((s) => s.day)
+      .sort((a, b) => a - b);
+
+    expect(jours.length).toBeGreaterThanOrEqual(3);
+    for (let i = 1; i < jours.length; i++) {
+      expect(
+        jours[i]! - jours[i - 1]!,
+        `jours ${jours[i - 1]} et ${jours[i]}`,
+      ).toBeGreaterThanOrEqual(2);
+    }
+  });
+
+  it('le deadlift a un jour de repos complet la veille — c’est le 1RM prioritaire', () => {
+    const deadlift = SPECIAL_SESSIONS.find(
+      (s) => s.week === 0 && s.blueprint.slots.some((x) => x.exId === 'test-deadlift-1rm'),
+    )!;
+    expect(deadlift.day).toBe(3); // jeudi
+    expect(WEEK_DAYS[0]).not.toContain(2); // mercredi vide
+  });
+
+  it('le dimanche de la semaine 0 est libre : la semaine 1 démarre à froid', () => {
+    expect(WEEK_DAYS[0]).not.toContain(6);
+    expect(WEEK_DAYS[1]).toContain(0);
+  });
+
+  it('§12 — le poids de corps ne figure dans aucune séance de combine', () => {
+    for (const s of SPECIAL_SESSIONS) {
+      expect(
+        s.blueprint.slots.map((x) => x.exId),
+        s.blueprint.title,
+      ).not.toContain('test-bodyweight');
+    }
+  });
+
+  it('la semaine 12 couvre les 5 jours', () => {
+    const s12 = SPECIAL_SESSIONS.filter((s) => s.week === 12).map((s) => s.day);
+    expect(s12.sort((a, b) => a - b)).toEqual([0, 2, 4, 5, 6]);
+  });
+
+  it('le lundi S12 accueille le bench et le push press du tableau (décision de Guillaume)', () => {
+    const lundi = SPECIAL_SESSIONS.find((s) => s.week === 12 && s.day === 0)!.blueprint;
+    const ids = lundi.slots.map((s) => s.exId);
+    expect(ids).toEqual([
+      'box-jump',
+      'back-squat',
+      'bulgarian-split-squat',
+      'ab-wheel',
+      'bench-press',
+      'push-press',
+    ]);
+    // Les quatre autres jours sont des tests purs : aucun lift chargé du tableau.
+    for (const day of [2, 4, 5, 6] as DayIndex[]) {
+      const s = SPECIAL_SESSIONS.find((x) => x.week === 12 && x.day === day)!.blueprint;
+      const lourds = s.slots.filter((slot) => slot.liftId && slot.liftId !== 'speed-squat');
+      expect(
+        lourds.map((l) => l.exId),
+        `S12 ${DAY_LABELS[day]}`,
+      ).toEqual([]);
+    }
+  });
+
+  it('le combine intermédiaire ne contient aucun test de 1RM (§12)', () => {
+    for (const s of SPECIAL_SESSIONS.filter((x) => x.week === 8)) {
+      const has1RM = s.blueprint.slots.some((slot) => slot.exId.endsWith('-1rm'));
+      expect(has1RM, `S8 ${DAY_LABELS[s.day]}`).toBe(false);
+    }
+  });
+
+  it('les paliers de montée de charge sont croissants', () => {
+    for (const jeu of [RAMPS, RAMPS_S12]) {
+      for (const [lift, ramp] of Object.entries(jeu)) {
+        for (let i = 1; i < ramp.length; i++) {
+          expect(ramp[i]!.kg, `${lift} palier ${i}`).toBeGreaterThan(ramp[i - 1]!.kg);
+        }
+      }
+    }
+  });
+});
+
+/**
+ * §12 — les paliers du test final sont calés sur les maxima MESURÉS.
+ *
+ * L'appli réutilisait en semaine 12 les paliers du test initial. Ceux-là
+ * avaient été écrits sur un squat supposé à 140 : pour un 1RM mesuré à 110,
+ * l'échauffement montait à 100, 115 puis 130 kg — trois séries au-dessus du
+ * maximum avant le premier essai. Ces tests échouent si ces paliers reviennent.
+ */
+describe('§12 — paliers du test final', () => {
+  const md = readFileSync(new URL('../../programme-final-12-semaines.md', import.meta.url), 'utf8');
+
+  /*
+   * Ces quatre boucles ne portent que sur les lifts dont un maximum a été
+   * MESURÉ. Le push press n'en a pas — il vient d'entrer au combine — donc il
+   * n'a pas de paliers recalés, et comparer les siens à un maximum qui
+   * n'existe pas donnerait des NaN silencieux. Son absence est vérifiée juste
+   * en dessous, explicitement.
+   */
+  const recales = Object.entries(RAMPS_S12).filter((e) => e[0] in MESURES_COMBINE);
+
+  it('le push press n’a pas de paliers recalés : rien ne l’a jamais mesuré', () => {
+    expect(MESURES_COMBINE).not.toHaveProperty('push-press');
+    // La S12 garde les MÊMES essais — c'est ce qui rend les deux mesures
+    // comparables — avec une mise en route plus courte, le corps sortant
+    // déjà d'un squat 1RM.
+    const essaisDe = (r: readonly { kg: number; attempt?: boolean }[]) =>
+      r.filter((x) => x.attempt).map((x) => x.kg);
+    expect(essaisDe(RAMPS_S12['push-press'])).toEqual(essaisDe(RAMPS['push-press']));
+    expect(RAMPS_S12['push-press'].length).toBeLessThan(RAMPS['push-press'].length);
+    // Et ses deux derniers essais sont facultatifs, faute de savoir où il va.
+    const essais = RAMPS['push-press'].filter((r) => r.attempt);
+    expect(essais.slice(1).every((r) => r.optional === true)).toBe(true);
+  });
+
+  it('aucun échauffement n’atteint le 1RM mesuré', () => {
+    for (const [lift, ramp] of recales) {
+      const max = MESURES_COMBINE[lift as keyof typeof MESURES_COMBINE];
+      for (const step of ramp.filter((r) => !r.attempt)) {
+        expect(step.kg, `${lift} — échauffement à ${step.kg} pour un max de ${max}`).toBeLessThan(
+          max,
+        );
+      }
+    }
+  });
+
+  it('le dernier échauffement reste sous 95 % du maximum mesuré', () => {
+    // Un maximum mesuré ne se soulève pas à l'échauffement. Le §12 finissait à
+    // 130 pour un deadlift annoncé à 130, soit 100 % : c'était une compensation
+    // d'un chiffre que son auteur savait faux, pas un palier.
+    for (const [lift, ramp] of recales) {
+      const max = MESURES_COMBINE[lift as keyof typeof MESURES_COMBINE];
+      const dernier = [...ramp].reverse().find((r) => !r.attempt)!;
+      expect(dernier.kg / max, `${lift} — dernier échauffement`).toBeLessThanOrEqual(0.95);
+    }
+  });
+
+  it('chaque premier essai dépasse le maximum mesuré', () => {
+    // Un test de 1RM qui n'ouvre pas au-dessus du record ne peut rien prouver.
+    for (const [lift, ramp] of recales) {
+      const max = MESURES_COMBINE[lift as keyof typeof MESURES_COMBINE];
+      const premier = ramp.find((r) => r.attempt)!;
+      expect(premier.kg, `${lift} — premier essai`).toBeGreaterThan(max);
+    }
+  });
+
+  it('le dernier essai atteint la cible du §13, sans la dépasser', () => {
+    // C'est ce qui relie les deux tableaux : la cible annoncée dans Combine doit
+    // être atteignable par un essai du protocole, sinon elle n'est qu'un chiffre.
+    const CIBLE_BASSE: Record<string, number> = {
+      'back-squat': 117.5,
+      'bench-press': 120,
+      deadlift: 162.5,
+      'weighted-pullup': 50,
+    };
+    for (const [lift, ramp] of recales) {
+      const essais = ramp.filter((r) => r.attempt).map((r) => r.kg);
+      expect(
+        Math.max(...essais),
+        `${lift} — le protocole n’atteint pas la cible §13`,
+      ).toBeGreaterThanOrEqual(CIBLE_BASSE[lift]!);
+    }
+  });
+
+  it('les paliers du test initial restent ceux du .md, intacts', () => {
+    // Ils décrivent la séance qui a réellement été montée ce jour-là. La
+    // réécrire après coup reviendrait à réécrire ce qui a produit les mesures.
+    expect(RAMPS['back-squat'].map((r) => r.kg)).toEqual([60, 80, 100, 115, 130, 142.5, 147.5]);
+    expect(md).toContain('60×5 / 80×3 / 100×2 / 115×1 / 130×1 / 142,5 / 147,5 si rapide');
+  });
+
+  it('les paliers du test final sont écrits dans le .md', () => {
+    const fr = (n: number) => String(n).replace('.', ',');
+    for (const [lift, ramp] of Object.entries(RAMPS_S12)) {
+      for (const step of ramp) {
+        expect(md, `${lift} — palier ${step.kg} absent du §12`).toContain(fr(step.kg));
+      }
+    }
+    expect(md).toContain('47,5×5 / 62,5×3 / 77,5×2 / 90×1 / 102,5×1');
+    expect(md).toContain('65×5 / 85×3 / 107,5×2 / 125×1 / 130×1');
+    // Le push press n'a qu'un seul jeu : il sert au test initial ET à la S12.
+    expect(md).toContain('40×5 / 50×3 / 57,5×2 / 65×1 / 72,5×1, puis essais 77,5 / 82,5 / 85');
+  });
+});
+
+describe('périodisation §2', () => {
+  it('chaque semaine 0-12 a un bloc', () => {
+    for (let w = 0; w <= 12; w++) {
+      const block = blocDeLaSemaine(w);
+      expect(block, `semaine ${w}`).not.toBeNull();
+      if (block !== null) expect(BLOCKS[block]).toBeDefined();
+    }
+  });
+
+  it('n’invente aucun bloc hors du programme', () => {
+    // Depuis que `WeekIndex` est un nombre, une semaine 13 compile. Elle ne
+    // doit pour autant rien renvoyer.
+    expect(blocDeLaSemaine(13)).toBeNull();
+    expect(blocDeLaSemaine(-1)).toBeNull();
+    expect(joursDeLaSemaine(13)).toEqual([]);
+  });
+
+  it('expose exactement les treize semaines du programme', () => {
+    expect(SEMAINES).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
+  });
+
+  it('les blocs suivent le tableau §2', () => {
+    expect(Object.values(WEEK_BLOCKS)).toEqual([
+      'test',
+      'accumulation',
+      'accumulation',
+      'accumulation',
+      'deload',
+      'maxforce',
+      'maxforce',
+      'maxforce',
+      'deload',
+      'power',
+      'power',
+      'power',
+      'taper',
+    ]);
+  });
+
+  it('la semaine 1 est une semaine pleine : 5 séances, à partir du lundi', () => {
+    expect(WEEK_DAYS[1]).toEqual([0, 2, 4, 5, 6]);
+    expect(SPECIAL_SESSIONS.find((s) => s.week === 1)).toBeUndefined();
+  });
+
+  it('la semaine 0 groupe les cinq séances du combine, mercredi et dimanche exclus', () => {
+    expect(WEEK_DAYS[0]).toEqual([0, 1, 3, 4, 5]);
+    const lundi = SPECIAL_SESSIONS.find((s) => s.week === 0 && s.day === 0);
+    expect(lundi?.blueprint.title).toContain('sauts, sprints, squat');
+  });
+
+  it('toutes les semaines d’entraînement gardent la même grille de 5 jours', () => {
+    for (let w = 1; w <= 12; w++) {
+      expect(WEEK_DAYS[w as 1], `semaine ${w}`).toEqual([0, 2, 4, 5, 6]);
+    }
+  });
+});
+
+describe('échauffements §6', () => {
+  it('sont cochables et sans id dupliqué', () => {
+    const ids = [...WARMUPS.lower.items, ...WARMUPS.upper.items].map((i) => i.id);
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(WARMUPS.lower.items.length).toBe(7);
+    expect(WARMUPS.upper.items.length).toBe(6);
+  });
+});
+
+/**
+ * §13 — les cibles à 12 semaines affichées dans l'onglet Combine.
+ *
+ * Rien ne les reliait au .md : elles sont restées sur les estimations d'avant
+ * le combine alors que toutes les charges avaient été recalées. L'écran
+ * annonçait « Back Squat 110 → cible 150-155 kg », soit +40 kg en douze
+ * semaines, pendant que le programme n'en visait que +7 à +11 %.
+ */
+describe('§13 — cibles à 12 semaines', () => {
+  const MD_13 = readFileSync(
+    new URL('../../programme-final-12-semaines.md', import.meta.url),
+    'utf8',
+  )
+    .split('## 13.')[1]!
+    // Borné à la section 13 : prendre « tout ce qui suit » ferait passer un
+    // test qui cherche une valeur écrite dans une section ajoutée plus tard.
+    .split('\n## ')[0]!;
+
+  it('chaque cible du code se retrouve mot pour mot dans le .md', () => {
+    for (const [id, c] of Object.entries(TARGETS_12_WEEKS)) {
+      if (c.kind === 'relatif') {
+        expect(MD_13, `${id} — cible`).toContain(c.label);
+      } else if (c.kind === 'gain') {
+        // Le .md écrit la progression, le code l'applique : les deux doivent
+        // dire le même pourcentage. Le document arrondit à l'entier (« +11 à
+        // 28 % » pour 11,1 et 27,8 sur les tractions strictes, où un demi
+        // pourcent n'est même pas une répétition).
+        const ligne = LIGNE_MD[id];
+        expect(ligne, `${id} — ligne du .md inconnue dans le test`).toBeDefined();
+        expect(MD_13, `${id} — ligne du §13`).toContain(ligne!);
+        const [bas, haut] = ligne!.match(/\d+/g)!.slice(-2).map(Number);
+        expect(Math.round(c.minPct), `${id} — borne basse`).toBe(bas);
+        expect(Math.round(c.maxPct), `${id} — borne haute`).toBe(haut);
+      }
+    }
+  });
+
+  it('la table des cibles ne contient plus AUCUN kilo', () => {
+    /*
+     * Le test qui garde la porte fermée. Un départ ou une cible en kilos dans
+     * cette table, c'est la performance de quelqu'un servie à tout le monde —
+     * exactement le défaut qu'on vient de retirer.
+     */
+    const texte = JSON.stringify(TARGETS_12_WEEKS);
+    expect(texte, 'un kilo s’est glissé dans les cibles').not.toMatch(/\d\s*kg/);
+    for (const c of Object.values(TARGETS_12_WEEKS)) {
+      if (c.kind === 'relatif') {
+        expect(c.label, 'une cible relative chiffrée en kilos').not.toMatch(/kg/);
+      }
+    }
+  });
+
+  /*
+   * Le garde-fou qui aurait attrapé le défaut : une cible doit rester au-dessus
+   * de son départ, sans lui demander l'impossible. 30 % en douze semaines est
+   * déjà énorme ; l'ancienne cible du squat en demandait 36 %.
+   */
+  /*
+   * La bande de poids du graphique était « 77-80 kg » pour tout le monde. Ce
+   * n'était pas une recommandation de santé : c'était le but personnel de
+   * l'auteur, affiché à quiconque ouvre l'écran Progrès. Elle est devenue un
+   * réglage que l'utilisateur remplit, vide par défaut.
+   */
+  it('aucune bande de poids n’est servie à tout le monde', () => {
+    expect(DEFAULT_SETTINGS_ROW.ciblePoidsBasKg, 'une cible de poids par défaut').toBeNull();
+    expect(DEFAULT_SETTINGS_ROW.ciblePoidsHautKg, 'une cible de poids par défaut').toBeNull();
+    expect(MD_13, 'le §13 garde une ligne Poids chiffrée').not.toMatch(/\|\s*Poids\s*\|/);
+    expect(MD_13).toContain('Le poids de corps ne porte plus de cible');
+  });
+
+  it('le poids de corps ne porte AUCUN objectif imposé', () => {
+    expect(TARGETS_12_WEEKS['test-bodyweight']).toEqual({ kind: 'aucune' });
+    expect(cibleFor('test-bodyweight', 82)).toBeNull();
+  });
+
+  it('aucune cible ne demande plus de 30 % de progression', () => {
+    // L'invariant survit au passage en pourcentages : il porte maintenant sur
+    // le gain lui-même, donc il vaut pour TOUS les utilisateurs et plus
+    // seulement pour les maxima de Guillaume.
+    for (const [id, c] of Object.entries(TARGETS_12_WEEKS)) {
+      if (c.kind !== 'gain') continue;
+      expect(c.minPct, `${id} — cible sous le départ`).toBeGreaterThan(0);
+      expect(c.maxPct, `${id} — ${c.maxPct} %`).toBeLessThanOrEqual(30);
+      expect(c.maxPct, `${id} — bornes inversées`).toBeGreaterThanOrEqual(c.minPct);
+    }
+  });
+
+  it('les gains redonnent les kilos que le §13 annonce pour l’auteur', () => {
+    /*
+     * Le §13 ne donne plus de cible en kilos à personne, mais il garde un
+     * paragraphe d'exemple : appliquées au combine de l'auteur, voilà ce que
+     * les progressions donnent. Ce test tient le paragraphe et le code
+     * ensemble — modifier un pourcentage sans corriger l'exemple le fait
+     * tomber.
+     */
+    const attendu: Record<string, string> = {
+      'test-squat-1rm': '117,5-122,5 kg',
+      'test-bench-1rm': '117,5-122,5 kg',
+      'test-deadlift-1rm': '145-150 kg',
+      'test-weighted-pullup-1rm': '+47,5 kg',
+    };
+    for (const [id, cible] of Object.entries(attendu)) {
+      expect(cibleFor(id, DEPART_MD[id]!), id).toBe(cible);
+      expect(MD_13, `${id} — exemple du §13`).toContain(cible.replace('+', ''));
+    }
+  });
+
+  it('deux utilisateurs différents reçoivent deux objectifs différents', () => {
+    // Arrondis au disque de 2,5 kg : c'est ce qui existe sur une barre.
+    expect(cibleFor('test-squat-1rm', 100)).toBe('107,5-110 kg');
+    expect(cibleFor('test-squat-1rm', 180)).toBe('192,5-200 kg');
+  });
+
+  it('sans performance initiale, aucun objectif n’est inventé', () => {
+    for (const id of Object.keys(TARGETS_12_WEEKS)) {
+      const c = TARGETS_12_WEEKS[id]!;
+      if (c.kind !== 'gain') continue;
+      expect(cibleFor(id, null), id).toBeNull();
+      expect(cibleFor(id, 0), `${id} — un zéro n'est pas une performance`).toBeNull();
+    }
+  });
+});
+
+/**
+ * Le lien entre une mesure du combine et sa colonne de charges.
+ *
+ * Il était déduit du nom : « test-squat-1rm » → « squat ». La colonne du §9
+ * s'appelle « back-squat », et celle du bench « bench-press » : les paliers de
+ * ces deux mouvements ne s'affichaient nulle part, sans aucune erreur.
+ */
+describe('chaque test de 1RM trouve ses paliers', () => {
+  it('les cinq mesures en -1rm ont un jeu de paliers, initial et final', () => {
+    const CLE: Record<string, keyof typeof RAMPS> = {
+      'test-squat-1rm': 'back-squat',
+      'test-bench-1rm': 'bench-press',
+      'test-deadlift-1rm': 'deadlift',
+      'test-weighted-pullup-1rm': 'weighted-pullup',
+      'test-push-press-1rm': 'push-press',
+    };
+    const mesures1RM = COMBINE_METRICS.filter((m) => m.endsWith('-1rm'));
+    expect([...mesures1RM].sort()).toEqual(Object.keys(CLE).sort());
+    for (const m of mesures1RM) {
+      expect(RAMPS[CLE[m]!], `${m} — paliers initiaux`).toBeDefined();
+      expect(RAMPS_S12[CLE[m]!], `${m} — paliers finaux`).toBeDefined();
+    }
+  });
+});
+
+/**
+ * §1 et §8 — ce que le .md promet et ce que le code fait.
+ *
+ * Ces tests existent parce que le §1 a menti pendant tout un cycle : il
+ * affirmait « deadlift inférieur au squat » sur une estimation, alors que le
+ * combine avait mesuré l'inverse. Un texte ne se vérifie pas tout seul.
+ */
+describe('§1 — le diagnostic est écrit sur les valeurs mesurées', () => {
+  const MD = readFileSync(new URL('../../programme-final-12-semaines.md', import.meta.url), 'utf8');
+  const MD_1 = MD.split('## 1.')[1]!.split('\n## ')[0]!;
+
+  it('les quatre maxima mesurés y figurent', () => {
+    for (const valeur of ['140', '115', '110', '+45']) {
+      expect(MD_1, valeur).toContain(valeur);
+    }
+  });
+
+  it('il ne dit plus que le deadlift est inférieur au squat', () => {
+    expect(MD_1).not.toMatch(/deadlift[^.]{0,80}inférieur au squat/i);
+    expect(MD_1).toMatch(/pas en retard sur le squat/i);
+  });
+
+  it('il ne conclut pas à un déficit de quadriceps', () => {
+    // En déduire un retard de quadriceps serait un diagnostic, et c'en est un
+    // que ni le programme ni l'application n'ont le droit de poser.
+    expect(MD_1).not.toMatch(/quadriceps[^.]{0,60}(retard|faible|point faible)/i);
+  });
+
+  it('les valeurs du §1 sont celles du code', () => {
+    const mesures: Record<string, string> = {
+      'test-deadlift-1rm': '140',
+      'test-bench-1rm': '115',
+      'test-squat-1rm': '110',
+    };
+    for (const [id, kg] of Object.entries(mesures)) {
+      // Le départ ne vit plus dans la table des cibles : il n'appartenait
+      // qu'à Guillaume. Il reste dans MESURES_COMBINE, base de calibration du
+      // programme publié, pas un objectif servi à autrui.
+      expect(String(MESURES_COMBINE[MESURE_POUR[id]!]), id).toBe(kg);
+    }
+  });
+});
+
+describe('§8 — la table de deload du tronc est celle du code', () => {
+  const MD = readFileSync(new URL('../../programme-final-12-semaines.md', import.meta.url), 'utf8');
+  /** Les lignes « | Exercice | habituel | deload | » du tableau du §8. */
+  const LIGNES = MD.split('Tronc et portés — ils déloadent eux aussi')[1]!
+    .split('\n\n')[1]!
+    .split('\n')
+    .filter((l) => l.startsWith('|') && !l.includes('---') && !l.includes('Habituel'))
+    .map((l) =>
+      l
+        .split('|')
+        .map((c) => c.trim())
+        .filter(Boolean),
+    );
+
+  /** « 2 × 5 / côté » et « 2 × 5/côté » décrivent la même chose. */
+  const norm = (t: string) => t.replace(/\s+/g, '').replace('–', '-');
+
+  it('le tableau a autant de lignes que la table du code', () => {
+    expect(LIGNES).toHaveLength(Object.keys(DELOAD_CORE).length);
+  });
+
+  it('chaque prescription de deload du code est écrite dans le .md', () => {
+    const ecrites = LIGNES.map((l) => norm(l[2]!));
+    for (const [id, { sets, work }] of Object.entries(DELOAD_CORE)) {
+      const attendu = norm(workLabel(sets, work));
+      expect(
+        ecrites.some((e) => e.startsWith(attendu)),
+        `${id} — ${workLabel(sets, work)} absent du tableau du §8`,
+      ).toBe(true);
+    }
+  });
+
+  it('les portés sont annoncés allégés, pas seulement raccourcis', () => {
+    for (const nom of ['Farmer Carry', 'Suitcase Carry']) {
+      const ligne = LIGNES.find((l) => l[0] === nom);
+      expect(ligne?.[2], nom).toContain('20 %');
+    }
+  });
+});
+
+describe('§8 — la Landmine Rotation', () => {
+  const MD = readFileSync(new URL('../../programme-final-12-semaines.md', import.meta.url), 'utf8');
+
+  it('la progression du §8 annonce les mêmes semaines que les règles de bloc', () => {
+    const table = MD.split('### Landmine Rotation')[1]!.split('###')[0]!;
+    // S1-4 : rien. S5-7 : 3 × 5. S8 : 2 × 4. S9-11 : 3 × 4. S12 : rien.
+    expect(table).toContain('| 5 | 3 × 5/côté');
+    expect(table).toContain('| 8 | 2 × 4/côté');
+    expect(table).toContain('| 9-11 | 3 × 4/côté');
+    // Et elle vit au vendredi, plus au dimanche.
+    expect(table).toMatch(/le \*\*vendredi\*\*/);
+  });
+
+  it('l’exercice existe au catalogue avec sa fiche complète', () => {
+    const ex = EXERCISES['landmine-rotation'];
+    expect(ex).toBeDefined();
+    expect(ex!.intent).toBeTruthy();
+    expect(ex!.progressionRule).toBeTruthy();
+    expect(ex!.altBasicFit).toBeTruthy();
+    // Objectif, muscles, exécution, intention, sécurité : cinq consignes au moins.
+    expect(ex!.cues!.length).toBeGreaterThanOrEqual(5);
+    expect(ex!.cues!.join(' ')).toMatch(/sécurité/i);
+  });
+});
+
+/**
+ * §8 — la hausse d'entrée de bloc.
+ *
+ * Elle est née d'un calcul de tonnage : 4 × 8 × 110 kg en 1 min 30 devenait
+ * 4 × 6 × 110 kg en 2 min, soit moins de travail à charge identique dans le
+ * bloc censé charger. Le .md et le code doivent dire la même chose.
+ */
+describe('§8 — les accessoires autorégulés montent en charge en force max', () => {
+  const MD = readFileSync(new URL('../../programme-final-12-semaines.md', import.meta.url), 'utf8')
+    .split('### Semaines 5-7')[1]!
+    .split('###')[0]!;
+
+  const patchs = BLOCK_RULES.filter((r) => r.block === 'maxforce')
+    .flatMap((r) => r.rules)
+    .filter((r): r is Extract<typeof r, { op: 'patch' }> => r.op === 'patch')
+    .filter((r) => r.patch.loadFactorAtBlockEntry !== undefined);
+
+  it('les deux accessoires concernés sont le Hip Thrust et le Bulgarian', () => {
+    expect(patchs.map((r) => r.exId).sort()).toEqual(['bulgarian-split-squat', 'hip-thrust']);
+  });
+
+  it('le facteur est le +10 % que le .md applique déjà, pas un chiffre neuf', () => {
+    for (const r of patchs) expect(r.patch.loadFactorAtBlockEntry, r.exId).toBe(1.1);
+    // Le même 10 % que les accessoires du haut, pour la même bascule 8 → 6.
+    expect(MD).toContain('Accessoires haut : 3 × 6 au lieu de 3 × 8, +10 %');
+  });
+
+  it('le .md l’écrit sur les deux lignes', () => {
+    for (const ligne of ['Bulgarian 4 × 5/jambe', 'Hip Thrust 4 × 6 RPE 8']) {
+      const i = MD.indexOf(ligne);
+      expect(i, ligne).toBeGreaterThan(-1);
+      expect(MD.slice(i, i + 120), ligne).toContain('+10 % de charge à l’entrée du bloc');
+    }
+  });
+
+  it('et il dit pourquoi, chiffres à l’appui', () => {
+    expect(MD).toContain('3 520 kg');
+    expect(MD).toContain('2 880 kg');
+    expect(MD).toMatch(/une seule fois/i);
+  });
+
+  /*
+   * Le garde-fou : ce facteur ne doit JAMAIS viser une charge écrite dans le
+   * programme. Sur une base fixe, `loadFactor` suffit et se réapplique sans
+   * dériver ; sur une base autorégulée, il composerait.
+   */
+  it('il ne vise que des exercices à charge autorégulée', () => {
+    for (const r of patchs) {
+      const slot = BASE_SESSIONS[r.exId === 'hip-thrust' ? 5 : 0]!.slots.find(
+        (s) => s.exId === r.exId,
+      );
+      expect(slot?.load.kind, r.exId).toBe('autoreg');
+    }
+  });
+});
+
+describe('§8 — Barbell Offset Hold', () => {
+  const MD = readFileSync(new URL('../../programme-final-12-semaines.md', import.meta.url), 'utf8');
+  const BLOC = MD.split('### Barbell Offset Hold')[1]!.split('###')[0]!;
+
+  it('le .md dit ce que le code programme', () => {
+    expect(BLOC).toContain('| 5-7 | 3 × 25 s/côté | 60 s |');
+    expect(BLOC).toContain('| 9-11 | 2 × 20 s/côté | 45 s |');
+    // La semaine 8 le déloade au lieu de le supprimer : il n'est plus
+    // nouveau à ce moment-là, il a trois semaines de pratique derrière lui.
+    expect(BLOC).toContain('| 8 | 2 × 15 s/côté (deload) | 60 s |');
+    expect(BLOC).toMatch(/\| 12 \| — \(semaine de tests/);
+  });
+
+  it('il dit pourquoi le mercredi, et pas le lundi', () => {
+    expect(BLOC).toMatch(/seul jour sans lift principal du bas du corps/i);
+    expect(BLOC).toMatch(/pas le lundi/i);
+  });
+
+  it('il assume son coût au lieu de le passer sous silence', () => {
+    expect(BLOC).toMatch(/65 à 68-69 minutes/);
+  });
+
+  it('la charge annoncée est bien celle d’un seul côté', () => {
+    expect(BLOC).toMatch(/UN SEUL côté/);
+    expect(EXERCISES['barbell-offset-hold']!.cues!.join(' ')).toMatch(/UN SEUL côté/);
+  });
+});
+
+describe('le mouvement « libre » n’appartient pas au programme', () => {
+  it('aucun exercice du catalogue ne le porte', () => {
+    /*
+     * `fn: 'libre'` existe pour les exercices choisis en séance — remplacement
+     * ou ajout, éventuellement tapés à la main. Le voir apparaître dans le
+     * catalogue voudrait dire qu'un exercice du .md a été transcrit sans qu'on
+     * sache à quel pattern il appartient, et il hériterait alors des règles
+     * d'incrément du bas du corps ou pas selon le hasard.
+     */
+    for (const id of EXERCISE_IDS) expect(EXERCISES[id]!.fn, id).not.toBe('libre');
+  });
+});
+
+describe('le .md ne transporte plus la blessure de son auteur', () => {
+  /*
+   * Le §14 suivait l'adducteur gauche de Guillaume : statuts par exercice,
+   * reprise du Copenhagen, curseurs de douleur. Un programme grand public ne
+   * peut pas porter la blessure de quelqu'un d'autre. Décision de Guillaume :
+   * il disparaît, et ses renvois avec lui.
+   */
+  const MD = readFileSync(new URL('../../programme-final-12-semaines.md', import.meta.url), 'utf8');
+
+  it('le §14 n’existe plus', () => {
+    expect(MD).not.toMatch(/^## 14\./m);
+  });
+
+  it('aucun renvoi ne pointe vers lui, aucune mention de l’adducteur', () => {
+    expect(MD).not.toMatch(/§ ?14/);
+    expect(MD).not.toMatch(/adducteur/i);
+    expect(MD).not.toMatch(/symptomatique|kiné du sport/i);
+  });
+
+  it('la règle générale de la douleur reste, elle : le cas 8', () => {
+    // Le cas 8 vaut pour tout le monde. Seul son exemple personnel est parti.
+    expect(MD).toMatch(/\*\*Cas 8 — douleur localisée sur un mouvement\*\* →/);
+  });
+});
+
+/*
+ * §8 S9-11 — les repos du contraste, jour par jour.
+ *
+ * L'empreinte enregistre le contraste (« broad-jump×2 ») mais PAS ses deux
+ * repos : un repos changé dans le code sans le .md — ou l'inverse — passait
+ * inaperçu. Ce test relit la ligne de chaque jour du .md.
+ */
+describe('§8 S9-11 — les repos du contraste sont ceux du .md', () => {
+  const MD = readFileSync(new URL('../../programme-final-12-semaines.md', import.meta.url), 'utf8');
+  const BLOC = MD.split('### Semaines 9-11')[1]!.split('\n### ')[0]!;
+  const JOURS: Record<number, string> = { 0: 'Lundi', 2: 'Mercredi', 5: 'Samedi' };
+
+  /** « 2 min » → 120, « 90 s » → 90, « 1 min 30 » → 90. */
+  const secondes = (t: string): number => {
+    const m = /^(?:(\d+) min)?\s*(\d+)?\s*(s)?$/.exec(t.trim());
+    if (!m) throw new Error(`durée illisible : ${t}`);
+    const [, min, reste, s] = m;
+    if (s && !min) return Number(reste);
+    return Number(min ?? 0) * 60 + Number(reste ?? 0);
+  };
+
+  for (const [dayStr, nom] of Object.entries(JOURS)) {
+    it(`${nom} : lourd → explosif, puis explosif → lourd`, () => {
+      const spec = CONTRAST_BY_DAY[Number(dayStr) as DayIndex]!;
+      const ligne = BLOC.split('\n').find((l) => l.startsWith(`**${nom}** : `));
+      expect(ligne, `ligne ${nom} du §8`).toBeDefined();
+      const m = /→ repos ([^→]+?) → [^→]+ → repos ([^→]+?) → /.exec(ligne!);
+      expect(m, `repos du contraste, ${nom}`).not.toBeNull();
+      expect(secondes(m![1]!), `${nom} : lourd → explosif`).toBe(spec.restAfterHeavySec);
+      expect(secondes(m![2]!), `${nom} : explosif → lourd`).toBe(spec.restAfterExplosiveSec);
+    });
+  }
+
+  it('le cycle annoncé est la somme des deux repos', () => {
+    for (const spec of Object.values(CONTRAST_BY_DAY)) {
+      const total = spec!.restAfterHeavySec + spec!.restAfterExplosiveSec;
+      const attendu = `Cycle ≈ ${Math.floor(total / 60)} min${total % 60 ? ` ${total % 60}` : ''}`;
+      expect(spec!.cycleLabel, spec!.heavy).toBe(attendu);
+    }
+  });
+
+  it('samedi : 1 min 30 après le deadlift, 2 min après les broad jumps (décision de Guillaume)', () => {
+    expect(CONTRAST_BY_DAY[5]).toMatchObject({ restAfterHeavySec: 90, restAfterExplosiveSec: 120 });
+  });
+});

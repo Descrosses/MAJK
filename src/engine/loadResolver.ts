@@ -1,0 +1,163 @@
+/**
+ * Résolution d'un `LoadSpec` en kilos affichables.
+ *
+ * Trois sources possibles, dans cet ordre :
+ *   1. une valeur écrite dans le programme (tableau §9, trames §7) ;
+ *   2. un pourcentage d'un 1RM testé (ajustement ROUGE de §4) ;
+ *   3. l'historique réel, pour les charges autorégulées que le programme ne
+ *      chiffre nulle part (Bulgarian, Hip Thrust).
+ */
+
+import type { LoadSpec, LoadStep } from '../data/types';
+import { roundToStep } from './rounding';
+import type { Occurrence, Settings } from './types';
+import { lastCompleted } from './progression';
+
+export type LoadShape =
+  | 'barbell'
+  | 'added'
+  | 'dbPair'
+  | 'dbSingle'
+  /** Poulie : le programme ne chiffre rien, la charge vient de la machine. */
+  | 'cable'
+  | 'bodyweight'
+  | 'text'
+  | 'none';
+
+export interface ResolvedLoad {
+  kg: number | null;
+  shape: LoadShape;
+  step: LoadStep;
+  /** Plafond assumé (RDL S9-11 à 95 kg). */
+  kgMax?: number;
+  /** Texte brut quand le programme ne chiffre pas (« 2 × 6-8 kg »). */
+  text?: string;
+  /** D'où vient le chiffre — sert à expliquer l'affichage à l'utilisateur. */
+  source: 'programme' | '1rm' | 'historique' | 'aucune';
+}
+
+export interface ResolveContext {
+  settings: Settings;
+  /**
+   * Les occurrences utilisables comme RÉFÉRENCE pour cette séance — pas tout
+   * l'historique du mouvement.
+   *
+   * La différence a coûté 20 kg sur le Hip Thrust : en prenant la dernière
+   * occurrence tout court, la semaine 5 héritait de la charge de deload de la
+   * semaine 4 et proposait 90 kg à quelqu'un qui venait d'en faire 110. Le tri
+   * est décidé par l'appelant (`getSession`), qui seul sait quelle séance est
+   * affichée et quelles semaines sont des deloads.
+   */
+  occurrences: Occurrence[];
+}
+
+const NONE: ResolvedLoad = { kg: null, shape: 'none', step: 2.5, source: 'aucune' };
+
+export function resolveLoad(load: LoadSpec, ctx: ResolveContext): ResolvedLoad {
+  switch (load.kind) {
+    case 'barbell':
+      return {
+        kg: load.kg,
+        shape: 'barbell',
+        step: load.step,
+        source: 'programme',
+        ...(load.kgMax !== undefined ? { kgMax: load.kgMax } : {}),
+      };
+
+    case 'added':
+      return { kg: load.kg, shape: 'added', step: load.step, source: 'programme' };
+
+    case 'dbPair':
+      return { kg: load.kg, shape: 'dbPair', step: load.step, source: 'programme' };
+
+    case 'dbSingle':
+      return { kg: load.kg, shape: 'dbSingle', step: load.step, source: 'programme' };
+
+    case 'pct1RM': {
+      const forme: LoadShape = load.lift === 'weighted-pullup' ? 'added' : 'barbell';
+
+      /*
+       * Les installations qui tournaient déjà sur le tableau en kilos le
+       * gardent : elles ont un plan en cours, et une mise à jour n'a pas à le
+       * réécrire au milieu des douze semaines. Leur maximum n'entre pas dans
+       * le calcul — c'est bien le kilo écrit qu'elles doivent revoir.
+       */
+      if (ctx.settings.tableauOrigine && load.kgOrigine !== undefined) {
+        return { kg: load.kgOrigine, shape: forme, step: load.step, source: 'programme' };
+      }
+
+      const oneRM = ctx.settings.oneRM[load.lift as keyof Settings['oneRM']];
+      /*
+       * Pas de maximum = pas de charge. Surtout pas un repli sur le kilo
+       * d'origine : ce serait servir la performance de l'auteur du programme à
+       * quelqu'un dont on ne sait rien, et c'est exactement ce qu'on retire.
+       * L'écran dira « à mesurer ».
+       */
+      if (oneRM === undefined) return { ...NONE, step: load.step, shape: forme };
+
+      return {
+        kg: roundToStep((oneRM * load.pct) / 100, load.step),
+        shape: forme,
+        step: load.step,
+        source: '1rm',
+      };
+    }
+
+    case 'forme': {
+      /*
+       * Le kilo n'est pas une prescription, c'est un repère de forme.
+       *
+       * Une installation déjà en cours le garde tel quel. Pour les autres, il
+       * ne s'affiche qu'une fois que l'utilisateur a soulevé ce mouvement au
+       * moins une fois : le décalage calculé sur cette première série déplace
+       * alors toute la forme à son niveau, semaine après semaine.
+       *
+       * Avant ça, rien. Afficher 80 kg de RDL à quelqu'un dont on ne sait
+       * rien, c'est lui servir la charge de l'auteur du programme — et c'est
+       * exactement ce qu'on retire.
+       */
+      const connu = ctx.settings.tableauOrigine || lastCompleted(ctx.occurrences) !== null;
+      if (!connu) return { ...NONE, step: load.step, shape: 'barbell' };
+      return {
+        kg: load.kg,
+        shape: 'barbell',
+        step: load.step,
+        source: 'programme',
+        ...(load.kgMax !== undefined ? { kgMax: load.kgMax } : {}),
+      };
+    }
+
+    case 'autoreg': {
+      const shape: LoadShape = load.as;
+
+      const last = lastCompleted(ctx.occurrences);
+      if (last?.kg != null) {
+        return { kg: last.kg, shape, step: load.step, source: 'historique' };
+      }
+      if (load.seed !== undefined) {
+        return { kg: load.seed, shape, step: load.step, source: 'programme' };
+      }
+      return { ...NONE, shape, step: load.step };
+    }
+
+    case 'bodyweight':
+      return { kg: null, shape: 'bodyweight', step: 2.5, source: 'programme' };
+
+    case 'text':
+      return { kg: null, shape: 'text', step: 2.5, text: load.label, source: 'programme' };
+
+    case 'none':
+      return { ...NONE };
+  }
+}
+
+/** Applique un facteur (deload −20 %, orange −5 %) en respectant le pas d'arrondi. */
+export function scaleLoad(load: ResolvedLoad, factor: number): ResolvedLoad {
+  if (load.kg === null) return load;
+  return { ...load, kg: roundToStep(load.kg * factor, load.step) };
+}
+
+/** Remplace la charge par une valeur explicite (rouge : 65 % du 1RM). */
+export function withKg(load: ResolvedLoad, kg: number | null): ResolvedLoad {
+  return { ...load, kg };
+}

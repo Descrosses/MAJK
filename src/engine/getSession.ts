@@ -1,0 +1,1010 @@
+/**
+ * `getSession(week, day, ctx)` — la séance du jour, déjà ajustée.
+ *
+ * Ordre des transformations, et il compte :
+ *   1. trame de départ  — §12 / §8 S12 si la séance est écrite en toutes
+ *                         lettres, sinon la trame §7 du jour ;
+ *   2. règles de bloc   — §8, pour force max et puissance ;
+ *   3. deload           — §8, semaines 4 et 8, sur les séances non écrites ;
+ *   4. tableau §9       — séries, reps, charge et RPE des lifts principaux ;
+ *   5. progression      — §11, en SUGGESTION, jamais appliquée d'office ;
+ *   6. feu tricolore    — §4, appliqué à la charge affichée ET à la suggestion ;
+ *   7. cas 7            — §11, sauts en baisse : 3 séries, plus de conditioning.
+ */
+
+import { estAlignable, repsAlignees } from './alignementReps';
+import {
+  BIG_MOVEMENT_IDS,
+  BLOCKS,
+  DELOAD_CORE,
+  DELOAD_POLICY,
+  READINESS_THRESHOLDS,
+  WEEK_BLOCKS,
+  joursDeLaSemaine,
+  blocDeLaSemaine,
+  blockNotesFor,
+  rulesFor,
+} from '../data/program';
+import { BASE_SESSIONS } from '../data/baseSessions';
+import { CONTRAST_BY_DAY, type ContrastSpec, type SlotPatch } from '../data/blockRules';
+import { EXERCISES } from '../data/exercises';
+import { prescriptionFor } from '../data/mainLiftTable';
+import { specialSession } from '../data/testSessions';
+import { WARMUPS } from '../data/warmups';
+import type {
+  Block,
+  DayIndex,
+  ExerciseDef,
+  Intensity,
+  RampStep,
+  RPETarget,
+  Slot,
+  Warmup,
+  WeekIndex,
+  Work,
+} from '../data/types';
+import { fr, loadLine as formatLoadLine, workLabel } from './format';
+import { resolveLoad, scaleLoad, withKg, type ResolvedLoad } from './loadResolver';
+import { deloadFromReal, recalageFor, scaleToReal, shiftLoad } from './realLoad';
+import { dureeEstimeeMin, dureeLabel } from './sessionDuration';
+import { applyProgression, lastCompleted, type ProgressionResult } from './progression';
+import { roundToStep } from './rounding';
+import type { Occurrence, OneRMKey, SessionContext } from './types';
+
+// ---------------------------------------------------------------------------
+
+export interface Adjustment {
+  /**
+   * D'où vient l'ajustement. `reel` est le recalage du plan sur ce qui a
+   * vraiment été soulevé — un FAIT, pas un jugement : il s'applique seul,
+   * là où un ajustement §11 se propose et s'accepte.
+   */
+  source: 'bloc' | 'deload' | 'orange' | 'rouge' | 'cas7' | 'plafond' | 'reel' | 'alignement';
+  what: string;
+  why: string;
+}
+
+/**
+ * La charge cible d'un exercice en fourchette de %1RM (MASS FORCE).
+ *
+ * - `calculee` : un 1RM compatible existe ; la charge est une FOURCHETTE,
+ *   sans arrondi. `type` dit d'où vient le 1RM : seul « mesure » existe
+ *   aujourd'hui, « estime » attend une formule validée.
+ * - `a-completer` : la fourchette existe, mais aucun 1RM mesuré au même
+ *   matériel.
+ * - `a-determiner` : aucune fourchette validée pour cet exercice.
+ */
+export type ChargeCible =
+  | {
+      kind: 'calculee';
+      pctMin: number;
+      pctMax: number;
+      kgMin: number;
+      kgMax: number;
+      /** La cible de CETTE séance, dans la fourchette (lot 6). */
+      pctCible: number;
+      kgCible: number;
+      /** Pourquoi cette cible : la séance précédente, en une phrase. */
+      motif: string | null;
+      materiel: string;
+      date: string;
+      type: 'mesure' | 'estime';
+    }
+  | { kind: 'a-completer'; pctMin: number; pctMax: number; materiel: string }
+  | { kind: 'a-determiner' }
+  /** Deux échecs au bas de la fourchette : plus de %, charge libre (lot 6). */
+  | { kind: 'suspendue'; pctMin: number; pctMax: number; materiel: string; motif: string };
+
+export interface ResolvedExercise {
+  def: ExerciseDef;
+  id: string;
+  name: string;
+  sets: number;
+  work: Work;
+  load: ResolvedLoad;
+  targetRPE: RPETarget | null;
+  restSec: number;
+  /** L'élément le plus visible de l'écran : « 5 × 3 × 115 kg ». */
+  loadLine: string;
+  /** Fourchette en %1RM (MASS FORCE). Absente partout ailleurs. */
+  chargeCible?: ChargeCible;
+  /** MASS FORCE : « augmente / garde / baisse », en une phrase. */
+  conseilProgression?: string;
+  /**
+   * Programme importé (ME, MYSELF & I) : l'objectif et la charge PRESCRITE de
+   * chaque série, quand elles diffèrent d'une série à l'autre (une pyramide
+   * 12/10/8/6). Absent partout ailleurs : `work` et `planKg` valent alors
+   * pour toutes les séries.
+   */
+  objectifsParSerie?: readonly { work: Work; kg: number | null }[];
+  /** Programme importé : l'intertitre du bloc du document (« SEANCE ABDOS »). */
+  section?: string;
+  /** MASS FORCE : sélecteur RIR facultatif sur la dernière série. */
+  demandeRir?: boolean;
+  /**
+   * Le bouton « Rep ratée » sur un exercice qui n'est pas un mouvement
+   * principal de POWER (MASS FORCE : sa progression lit `failed`).
+   */
+  signaleEchec?: boolean;
+  notes: string[];
+  /** S9-11 : l'explosif intercalé entre les séries. */
+  contrast?: ContrastSpec;
+  /** Paliers d'un test 1RM (§12). */
+  ramp?: RampStep[];
+  /**
+   * Identifiant partagé avec le mouvement voisin : les deux s'affichent dans
+   * un seul encadré. Voir `Slot.superset` et `src/engine/superset.ts`.
+   */
+  superset?: string;
+  /** Minutes allouées au bloc entier, quand le programme en impose. */
+  blocMinutes?: number;
+  /**
+   * Dernière charge réellement enregistrée sur cet exercice, ou `null`.
+   *
+   * Sert UNIQUEMENT à pré-remplir le champ de saisie, jamais la ligne de plan :
+   * un mouvement au poids du corps ou sur poulie n'a pas de charge planifiée, et
+   * le .md ne doit pas se voir attribuer un chiffre qu'il n'écrit pas.
+   */
+  lastKg: number | null;
+  /**
+   * Dernière mesure réellement enregistrée sur ce mouvement — distance d'un
+   * saut, d'un porté, temps d'un sprint.
+   *
+   * Pendant du `lastKg`, et pour la même raison : le champ de saisie doit
+   * s'ouvrir sur quelque chose de plausible. Il démarrait au minimum du
+   * curseur, 5 m ou 50 cm, donc valider un porté sans y toucher enregistrait
+   * 5 m au lieu de 30.
+   *
+   * On ne passe PAS par `lastCompleted` : ce champ vaut `false` sur un
+   * mouvement mesuré, qui n'enregistre pas de reps. On prend la dernière
+   * occurrence qui porte une mesure.
+   */
+  lastMeasure: number | null;
+  /**
+   * La charge que le PROGRAMME annonce, avant recalage sur le réel.
+   *
+   * `load.kg` porte le chiffre affiché, décalage compris. Celui-ci garde le
+   * chiffre du tableau, et c'est lui qu'on enregistre dans `plannedKg` à
+   * chaque série. Sans cette distinction, le décalage se mangerait lui-même :
+   * on écrirait « prévu 130, fait 130 », l'écart retomberait à zéro, et la
+   * semaine suivante le plan repartirait du tableau.
+   */
+  planKg: number | null;
+  /** §11 — proposition de charge, à accepter ou refuser. Jamais appliquée seule. */
+  suggestion: ProgressionResult | null;
+  adjustments: Adjustment[];
+}
+
+/**
+ * Un exercice que la séance prévoyait et qui n'est plus prescrit.
+ *
+ * Il n'est pas effacé de l'écran : l'y faire disparaître sans un mot laisserait
+ * croire à un oubli, et la raison de la mise à l'écart est précisément ce qu'il
+ * faut avoir sous les yeux pour décider de la reprise.
+ */
+export interface SuspendedExercise {
+  id: string;
+  name: string;
+  reason: string;
+}
+
+export interface ResolvedSession {
+  week: WeekIndex;
+  day: DayIndex;
+  block: Block;
+  blockName: string;
+  /**
+   * Programme sans bloc de périodisation affiché (MASS FORCE, semaine type) :
+   * l'écran de séance tait l'étiquette « Bloc … » au lieu d'en inventer un.
+   */
+  sansBloc?: true;
+  /**
+   * Programme importé dont le document ne donne ni intensité ni durée :
+   * l'écran tait ces pastilles au lieu d'afficher « MODÉRÉ » ou une durée que
+   * personne n'a écrite.
+   */
+  sansIntensite?: true;
+  sansDuree?: true;
+  blockColor: string;
+  title: string;
+  /**
+   * Durée CALCULÉE, pas l'étiquette écrite dans la trame.
+   *
+   * Celle du §3 avait été fixée une fois et jamais revue : le vendredi
+   * affichait « 60 min » pour quatre-vingts réelles. Un chiffre figé ne se
+   * contredit jamais tout seul — celui-ci suit les séries et les repos.
+   */
+  durationLabel: string;
+  /**
+   * La même durée, en minutes entières — le chiffre, pas l'étiquette.
+   *
+   * C'est lui qui sert de référence au chrono de fin de séance. Reparser
+   * « ≈ 74 min » pour retrouver 74 aurait marché, et se serait cassé le jour
+   * où l'étiquette change de forme : le résumé aurait alors comparé la durée
+   * réelle à rien du tout, sans erreur visible.
+   */
+  plannedMin: number;
+  intensity: Intensity;
+  warmup: Warmup | null;
+  readinessTest: boolean;
+  notes: string[];
+  exercises: ResolvedExercise[];
+  /** Prévus par la trame, retirés de la prescription, affichés avec leur raison. */
+  suspended: SuspendedExercise[];
+  adjustments: Adjustment[];
+}
+
+/** Cette case du calendrier porte-t-elle une séance ? */
+export function hasSession(week: WeekIndex, day: DayIndex): boolean {
+  return joursDeLaSemaine(week).includes(day);
+}
+
+const LOWER_BODY_FN = new Set(['squat', 'hinge', 'jump', 'carry']);
+const ONE_RM_FOR: Partial<Record<string, OneRMKey>> = {
+  'back-squat': 'back-squat',
+  'bench-press': 'bench-press',
+  deadlift: 'deadlift',
+  'weighted-pullup': 'weighted-pullup',
+};
+
+// ---------------------------------------------------------------------------
+
+export function getSession(
+  week: WeekIndex,
+  day: DayIndex,
+  ctx: SessionContext,
+): ResolvedSession | null {
+  if (!hasSession(week, day)) return null;
+
+  const block = blocDeLaSemaine(week);
+  // Une semaine hors programme n'a pas de bloc, donc pas de séance. Même
+  // règle qu'en dessous : refuser plutôt qu'inventer.
+  if (block === null) return null;
+  const special = specialSession(week, day);
+  // `hasSession` a déjà écarté les jours vides ; si aucune trame ne répond ici,
+  // c'est que `WEEK_DAYS` et `BASE_SESSIONS` se contredisent — on refuse plutôt
+  // que d'afficher une séance inventée.
+  const blueprint = special ?? BASE_SESSIONS[day];
+  if (!blueprint) return null;
+  const sessionAdjustments: Adjustment[] = [];
+
+  // 1-2. Trame + règles de bloc (jamais sur une séance écrite en toutes lettres).
+  let slots: Slot[] = blueprint.slots.map((s) => ({ ...s }));
+  const notes = [...blueprint.notes];
+
+  if (!special) {
+    const before = slots.length;
+    slots = applyBlockRules(slots, block, day, week);
+    notes.push(...blockNotesFor(block, day, week));
+    if (slots.length !== before) {
+      sessionAdjustments.push({
+        source: 'bloc',
+        what: BLOCKS[block].name,
+        why: `Séance adaptée au bloc « ${BLOCKS[block].name} » (§8).`,
+      });
+    }
+  }
+
+  // 3. Deload.
+  const isDeload = block === 'deload' && !special;
+  if (isDeload) {
+    slots = slots.filter((s) => !DELOAD_POLICY.removeExIds.includes(s.exId as never));
+    notes.push(...DELOAD_POLICY.notes);
+    sessionAdjustments.push({
+      source: 'deload',
+      what: 'Semaine de deload',
+      why: DELOAD_POLICY.notes[0]!,
+    });
+  }
+
+  /*
+   * Exercices suspendus — retirés de la prescription, pas du catalogue.
+   *
+   * Le filtre vient APRÈS les règles de bloc et le deload : une suspension
+   * n'est pas un ajustement de programmation, c'est un retrait. Elle ne
+   * dépend ni de la semaine, ni du bloc, ni du deload.
+   */
+  const suspended: SuspendedExercise[] = [];
+  slots = slots.filter((s) => {
+    const def = EXERCISES[s.exId];
+    if (!def?.suspended) return true;
+    suspended.push({
+      id: def.id,
+      name: def.name,
+      reason: def.suspended.reason,
+    });
+    return false;
+  });
+
+  // 4-5. Résolution exercice par exercice.
+  const contrast = block === 'power' && !special ? CONTRAST_BY_DAY[day] : undefined;
+  const exercises: ResolvedExercise[] = [];
+
+  for (const slot of slots) {
+    const resolved = resolveSlot(slot, {
+      week,
+      day,
+      block,
+      isDeload,
+      ctx,
+      contrast,
+    });
+    if (resolved) exercises.push(resolved);
+  }
+
+  // 5 bis. Reps alignées par l'utilisateur (accessoires et tronc seulement).
+  for (const ex of exercises) {
+    const aligne = ctx.settings.repsAlignees?.[ex.id];
+    if (aligne === undefined) continue;
+    if (!estAlignable(ex.def.role, ex.work.kind, ex.work.kind === 'reps' ? ex.work.reps : null)) {
+      continue;
+    }
+    if (ex.work.kind !== 'reps' || typeof ex.work.reps !== 'number') continue;
+    const cible = repsAlignees(ex.work.reps, aligne, isDeload || special !== null);
+    if (cible === ex.work.reps) continue;
+    ex.adjustments.push({
+      source: 'alignement',
+      what: `${cible} reps au lieu de ${ex.work.reps}`,
+      why: 'Attendu aligné sur ce que tu as tenu à tous les tours : tu l’as accepté.',
+    });
+    ex.work = { ...ex.work, reps: cible };
+  }
+
+  // 6. Feu tricolore.
+  const level = ctx.readiness?.level ?? 'vert';
+  let finalExercises = exercises;
+  if (level === 'orange') {
+    finalExercises = applyOrange(exercises);
+    sessionAdjustments.push({
+      source: 'orange',
+      what: 'Readiness ORANGE',
+      why: '−5 % sur les gros mouvements, une série de moins sur les accessoires (§4).',
+    });
+  } else if (level === 'rouge') {
+    finalExercises = applyRed(exercises, ctx);
+    sessionAdjustments.push({
+      source: 'rouge',
+      what: 'Readiness ROUGE',
+      why: 'Lift principal à 3 × 3 à 65 % du 1RM, tronc et mobilité, et tu rentres (§4).',
+    });
+    notes.push('Readiness rouge : aucune série au-dessus de RPE 8 aujourd’hui.');
+  }
+
+  // 7. Cas 7 — sauts en baisse deux semaines de suite.
+  if (ctx.explosiveDecline && level !== 'rouge') {
+    finalExercises = applyCase7(finalExercises);
+    sessionAdjustments.push({
+      source: 'cas7',
+      what: 'Sauts en baisse',
+      why: 'Lifts principaux ramenés à 3 séries, conditioning supprimé (§11 cas 7).',
+    });
+  }
+
+  const warmup = blueprint.warmup ? WARMUPS[blueprint.warmup] : null;
+
+  // Recalcule la ligne de charge après tous les ajustements.
+  for (const ex of finalExercises) {
+    ex.loadLine = formatLoadLine(ex.sets, ex.work, ex.load);
+  }
+
+  const mesurable = {
+    warmupDurationLabel: warmup?.durationLabel,
+    readinessTest: blueprint.readinessTest,
+    exercises: finalExercises,
+  };
+
+  return {
+    week,
+    day,
+    block,
+    blockName: BLOCKS[block].name,
+    blockColor: BLOCKS[block].color,
+    title: blueprint.title,
+    durationLabel: dureeLabel(mesurable),
+    plannedMin: dureeEstimeeMin(mesurable),
+    intensity: blueprint.intensity,
+    warmup,
+    readinessTest: blueprint.readinessTest,
+    notes,
+    exercises: finalExercises,
+    suspended,
+    adjustments: sessionAdjustments,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Règles de bloc
+// ---------------------------------------------------------------------------
+
+function applyBlockRules(slots: Slot[], block: Block, day: DayIndex, week: WeekIndex): Slot[] {
+  let out = slots;
+  for (const rule of rulesFor(block, day, week)) {
+    if (rule.op === 'remove') {
+      out = out.filter((s) => s.exId !== rule.exId);
+    } else if (rule.op === 'patch') {
+      out = out.map((s) => (s.exId === rule.exId ? patchSlot(s, rule.patch) : s));
+    } else {
+      const slot = { ...rule.slot };
+      if (rule.atStart) {
+        out = [slot, ...out];
+      } else if (rule.after) {
+        const i = out.findIndex((s) => s.exId === rule.after);
+        out = i === -1 ? [...out, slot] : [...out.slice(0, i + 1), slot, ...out.slice(i + 1)];
+      } else {
+        out = [...out, slot];
+      }
+    }
+  }
+  return out;
+}
+
+function patchSlot(slot: Slot, p: SlotPatch): Slot {
+  return {
+    ...slot,
+    ...(p.sets !== undefined ? { sets: p.sets } : {}),
+    ...(p.work !== undefined ? { work: p.work } : {}),
+    ...(p.restSec !== undefined ? { restSec: p.restSec } : {}),
+    ...(p.targetRPE !== undefined ? { targetRPE: p.targetRPE } : {}),
+    ...(p.load !== undefined ? { load: p.load } : {}),
+    ...(p.note !== undefined ? { note: p.note } : {}),
+    ...(p.superset !== undefined ? { superset: p.superset } : {}),
+    /* `blocMinutes` n'est pas corrigeable par un patch : un deload allège les
+     * charges et les séries, il ne raccourcit pas le temps imparti au bloc.
+     * La valeur du créneau passe telle quelle par l'étalement ci-dessus. */
+    // `loadFactor` et `contrastWith` sont consommés plus tard, on les mémorise.
+    ...(p.loadFactor !== undefined ? { __loadFactor: p.loadFactor } : {}),
+    ...(p.loadFactorAtBlockEntry !== undefined
+      ? { __loadFactorAtBlockEntry: p.loadFactorAtBlockEntry }
+      : {}),
+    ...(p.contrastWith !== undefined ? { __contrastWith: p.contrastWith } : {}),
+  } as Slot;
+}
+
+// ---------------------------------------------------------------------------
+// Résolution d'un exercice
+// ---------------------------------------------------------------------------
+
+interface ResolveOpts {
+  week: WeekIndex;
+  day: DayIndex;
+  block: Block;
+  isDeload: boolean;
+  ctx: SessionContext;
+  contrast: ContrastSpec | undefined;
+}
+
+/**
+ * Les occurrences utilisables comme référence de charge pour CETTE séance.
+ *
+ * ── Deux défauts réels, une seule cause ────────────────────────────────────
+ *
+ * Les charges autorégulées (Hip Thrust, Bulgarian, Hang High Pull) partaient
+ * de « la dernière occurrence enregistrée », sans regarder ni la semaine
+ * affichée ni la nature de cette occurrence. D'où :
+ *
+ * 1. Après un deload, la charge allégée devenait la nouvelle base. Le Hip
+ *    Thrust proposait 90 kg en semaine 5 à quelqu'un qui venait d'en faire
+ *    110 × 8 à RPE 8 en semaine 3. Une semaine de deload est une réduction
+ *    décidée, pas une contre-performance : elle ne redéfinit pas le niveau.
+ *
+ * 2. Rouvrir une séance passée recalculait son plan sur l'historique
+ *    d'AUJOURD'HUI. La semaine 3 se relisait « 4 × 8 × 90 kg » alors qu'elle
+ *    avait affiché 100 kg le jour même, et que 110 avaient été soulevés. Un
+ *    plan qui change après coup n'est plus un plan, c'est une reconstitution.
+ *
+ * On ne retient donc que ce qui précède STRICTEMENT la séance affichée, et on
+ * écarte les semaines de deload — sauf s'il ne reste rien d'autre, auquel cas
+ * un repère imparfait vaut mieux qu'aucun.
+ *
+ * Ce tri ne touche pas l'encart « la dernière fois » : lui doit montrer ce qui
+ * a réellement été fait, deload compris.
+ */
+export function referenceOccurrences(
+  all: Occurrence[],
+  week: WeekIndex,
+  day: DayIndex,
+): Occurrence[] {
+  const avant = all.filter((o) => o.week < week || (o.week === week && o.day < day));
+  const horsDeload = avant.filter((o) => WEEK_BLOCKS[o.week as WeekIndex] !== 'deload');
+  return horsDeload.length > 0 ? horsDeload : avant;
+}
+
+function resolveSlot(slot: Slot, o: ResolveOpts): ResolvedExercise | null {
+  const def = EXERCISES[slot.exId];
+  if (!def) return null;
+
+  const adjustments: Adjustment[] = [];
+  const notes: string[] = [];
+  if (slot.note) notes.push(slot.note);
+
+  let sets = slot.sets;
+  let work = slot.work;
+  let targetRPE = slot.targetRPE;
+  let loadSpec = slot.load;
+  /**
+   * Proportion de deload écrite par le programme pour CE mouvement, quand il
+   * en écrit une. Absente partout ailleurs, et c'est voulu : voir
+   * `WeekPrescription.deloadFromRealFactor`.
+   */
+  let deloadReel: number | undefined;
+
+  // 4. Tableau §9 pour les lifts principaux.
+  if (slot.liftId) {
+    // Les charges du tableau §9 sont des pourcentages d'un 1RM de référence.
+    // On les recale sur les maxima réellement testés au combine — ne pas le
+    // faire donnerait, avec un squat testé à 110, une semaine 1 à 91 % du max.
+    const presc = prescriptionFor(slot.liftId, o.week);
+    // Le mouvement n'est pas programmé cette semaine (front squat en S12).
+    if (!presc) return null;
+    sets = presc.sets;
+    work = presc.work;
+    targetRPE = presc.targetRPE;
+    if (presc.load) loadSpec = presc.load;
+    if (presc.note) notes.push(presc.note);
+    deloadReel = presc.deloadFromRealFactor;
+  }
+
+  const reference = referenceOccurrences(o.ctx.history[slot.exId] ?? [], o.week, o.day);
+
+  let load = resolveLoad(loadSpec, {
+    settings: o.ctx.settings,
+    occurrences: reference,
+  });
+
+  // « +10 % » des accessoires haut en force max (§8).
+  const factor = (slot as Slot & { __loadFactor?: number }).__loadFactor;
+  if (factor !== undefined && load.kg !== null) {
+    const before = load.kg;
+    load = scaleLoad(load, factor);
+    adjustments.push({
+      source: 'bloc',
+      what: `${before} → ${load.kg} kg`,
+      why: `Bloc force maximale : ${Math.round((factor - 1) * 100)} % sur les accessoires haut (§8).`,
+    });
+  }
+
+  /*
+   * Hausse d'entrée de bloc sur une charge autorégulée (§8).
+   *
+   * Elle ne s'applique qu'une fois, au passage de bloc : la charge de
+   * référence est ce qui a été soulevé la fois d'avant, donc une valeur qui
+   * contient déjà la hausse dès la deuxième semaine du bloc. La réappliquer
+   * chaque semaine la composerait.
+   *
+   * Et seulement sur une charge VENUE de l'historique : la valeur d'amorce du
+   * programme est déjà celle qu'il a choisie, on ne la corrige pas.
+   */
+  const facteurEntree = (slot as Slot & { __loadFactorAtBlockEntry?: number })
+    .__loadFactorAtBlockEntry;
+  if (facteurEntree !== undefined && load.kg !== null && load.source === 'historique') {
+    const ref = lastCompleted(reference);
+    if (ref && WEEK_BLOCKS[ref.week as WeekIndex] !== o.block) {
+      const before = load.kg;
+      load = scaleLoad(load, facteurEntree);
+      adjustments.push({
+        source: 'bloc',
+        what: `${before} → ${load.kg} kg`,
+        why: `Entrée en bloc ${BLOCKS[o.block].name.toLowerCase()} : moins de reps, plus de repos, donc ${Math.round((facteurEntree - 1) * 100)} % de charge en plus (§8). Le RPE cible reste le juge.`,
+      });
+    }
+  }
+
+  /*
+   * Recalage sur le réel — le cœur de « calculer en temps réel ».
+   *
+   * `planKg` est figé AVANT, et c'est ce qu'on enregistrera dans `plannedKg`
+   * à chaque série : le décalage se mesure toujours contre le tableau, jamais
+   * contre un chiffre qui le contient déjà.
+   *
+   * On ne recale que ce qui vient du PROGRAMME. Une charge autorégulée est
+   * déjà la dernière charge réelle ; lui ajouter le décalage le compterait
+   * deux fois.
+   */
+  /*
+   * Le plan garde son chiffre même quand l'écran n'en affiche aucun.
+   *
+   * Une case « forme » (Push Press, RDL) ne s'affiche pas tant que
+   * l'utilisateur n'a rien soulevé — mais c'est elle qui sert de repère à sa
+   * première série : `plannedKg` l'enregistre, et le décalage mesuré dessus
+   * déplace toute la forme à son niveau dès la semaine suivante. Sans ça, la
+   * première série serait enregistrée sans plan, l'écart vaudrait zéro, et la
+   * semaine d'après lui reservirait le kilo de l'auteur.
+   */
+  const planKg = load.kg ?? (loadSpec.kind === 'forme' ? loadSpec.kg : null);
+  const recalage = recalageFor(reference);
+
+  /*
+   * Un LEST n'est pas une charge : 80 % de lui ne veut rien dire.
+   *
+   * Les tractions lestées se chiffrent en kilos AJOUTÉS au poids du corps.
+   * Passer de 35 kg de lest à 28 (80 % de 35) ne retire que 6 % de l'effort
+   * réel — 78,5 + 35 = 113,5 contre 78,5 + 28 = 106,5 — alors que le tableau
+   * descend à 15 kg, soit le vrai allègement d'un deload. La proportion ne
+   * s'applique qu'à ce qui porte toute la charge.
+   */
+  const lest = load.shape === 'added';
+
+  if (o.isDeload && deloadReel !== undefined && recalage && !lest && load.kg !== null) {
+    /*
+     * Le deload se calcule sur le réel, pas sur le prévisionnel.
+     *
+     * Le tableau chiffre la semaine de deload en kilos absolus — 75 kg pour
+     * le RDL, soit 80 % des 95 kg qu'il ANNONÇAIT pour la semaine 7. Quand la
+     * semaine 7 s'est jouée à 130, ces 75 kg ne descendent de rien.
+     *
+     * C'est la règle déjà écrite pour les accessoires, étendue ici : 80 % de
+     * la dernière charge réelle hors deload.
+     */
+    const avant = load.kg;
+    const cible = deloadFromReal(recalage.refKg, deloadReel, load.step);
+    load = withKg({ ...load, source: 'historique' }, cible);
+    if (cible !== avant) {
+      adjustments.push({
+        source: 'deload',
+        what: `${avant} → ${cible} kg`,
+        why:
+          `Deload calculé sur le réel : ${Math.round(deloadReel * 100)} % de tes ` +
+          `${fr(recalage.refKg)} kg de la semaine ${recalage.refWeek}. Le tableau annonçait ${fr(avant)} kg, ` +
+          `qui étaient ${Math.round(deloadReel * 100)} % d’un prévisionnel que tu as dépassé.`,
+      });
+    }
+    /*
+     * Le décalage s'applique à toute charge que le PROGRAMME chiffre — en
+     * kilos (Push Press, RDL) comme en pourcentage d'un maximum (les quatre
+     * lifts du §9). Seule une charge déjà tirée de l'historique en est
+     * exclue : elle est déjà le réel, la recaler le compterait deux fois.
+     *
+     * Mais PAS dans la même unité. Une case écrite en pourcentage se recale
+     * en proportion ; une case écrite en kilos, et un lest, se recalent en
+     * kilos. Voir `scaleToReal` pour le détail — en deux mots : reporter des
+     * kilos sur un pourcentage alourdit les semaines légères, et ce sont les
+     * deloads.
+     */
+  } else if (recalage && load.source !== 'historique' && load.kg !== null) {
+    const proportionnel = loadSpec.kind === 'pct1RM' && !lest;
+    const avant = load.kg;
+    load = proportionnel ? scaleToReal(load, recalage.facteur) : shiftLoad(load, recalage.offsetKg);
+    if (load.kg !== avant) {
+      const ecart =
+        `en semaine ${recalage.refWeek} tu as fait ${fr(recalage.refKg)} kg ` +
+        `là où le plan annonçait ${fr(recalage.refPlannedKg!)} kg`;
+      adjustments.push({
+        source: 'reel',
+        what: `${fr(avant)} → ${fr(load.kg!)} kg`,
+        why: proportionnel
+          ? `Recalé sur ce que tu soulèves vraiment : ${ecart}. Le programme demande un ` +
+            `POURCENTAGE de ton maximum, donc ton écart le suit en proportion — ` +
+            `${fr(Math.round(recalage.facteur * 1000) / 10)} % du plan, cette semaine comme les autres.`
+          : `Recalé sur ce que tu soulèves vraiment : ${ecart}. Ton décalage de ` +
+            `${recalage.offsetKg > 0 ? '+' : '−'}${fr(Math.abs(recalage.offsetKg))} kg ` +
+            `suit le programme semaine après semaine.`,
+      });
+    }
+  }
+
+  // 3. Deload — uniquement sur ce que le tableau ne chiffre pas déjà.
+  if (o.isDeload && !slot.liftId) {
+    if (def.role === 'accessory' && load.kg !== null) {
+      const before = load.kg;
+      load = scaleLoad(load, DELOAD_POLICY.accessoryLoadFactor);
+      sets = DELOAD_POLICY.accessorySets;
+      adjustments.push({
+        source: 'deload',
+        what: `${before} → ${load.kg} kg, ${sets} séries`,
+        why: 'Deload : 80 % de ta dernière charge réelle, 2 séries (§8).',
+      });
+    } else if (def.role === 'accessory') {
+      sets = DELOAD_POLICY.accessorySets;
+    } else if (def.role === 'core' || def.role === 'carry') {
+      /*
+       * Le défaut corrigé : ces deux rôles ne tombaient dans aucune branche.
+       * Le tronc et les portés gardaient leur volume complet dans la semaine
+       * censée dissiper la fatigue — 3 × 8/côté de chop et 3 × 30 m/côté de
+       * suitcase en semaine 4, comme en semaine 3.
+       *
+       * Une seule réduction est appliquée ici, et aucune autre branche ne
+       * touche ces rôles : pas de double décompte.
+       */
+      const prevu = DELOAD_CORE[slot.exId];
+      const avant = { sets, work };
+      sets = prevu?.sets ?? DELOAD_POLICY.coreSets;
+      if (prevu) work = prevu.work;
+      if (def.role === 'carry' && load.kg !== null) {
+        load = scaleLoad(load, DELOAD_POLICY.carryLoadFactor);
+      }
+      adjustments.push({
+        source: 'deload',
+        what: `${workLabel(avant.sets, avant.work)} → ${workLabel(sets, work)}`,
+        why:
+          def.role === 'carry'
+            ? 'Deload : porté raccourci et allégé de 20 %, reps propres, aucune série à l’échec (§8).'
+            : 'Deload : moins de séries et moins de reps sur le tronc, aucune série à l’échec (§8).',
+      });
+    } else if (def.role === 'power') {
+      const before = sets;
+      sets = Math.max(1, Math.ceil(sets / DELOAD_POLICY.jumpVolumeDivisor));
+      adjustments.push({
+        source: 'deload',
+        what: `${before} → ${sets} séries`,
+        why: 'Deload : volume de sauts divisé par 2, intention maximale conservée (§8).',
+      });
+    }
+    targetRPE = capRPE(targetRPE, DELOAD_POLICY.maxRPE);
+  }
+
+  /*
+   * Le maximum manque : on le DIT, au lieu de laisser un tiret muet.
+   *
+   * Une case du §9 est un pourcentage. Sans maximum mesuré, elle ne peut pas
+   * se chiffrer — et il n'est pas question de la remplir avec une estimation
+   * ou avec le chiffre de quelqu'un d'autre. Mais un champ vide sans
+   * explication laisse l'utilisateur chercher ce qui ne va pas : la note dit
+   * d'où viendrait le chiffre et où le renseigner.
+   */
+  /*
+   * Une FORME sans ancre : on explique au lieu d'afficher un tiret.
+   *
+   * Push Press et RDL ne sont rattachés à aucun maximum — le programme les
+   * gouverne par le RPE et la vitesse de barre, pas par un pourcentage. Leur
+   * kilo au tableau est celui de l'auteur : tant que l'utilisateur n'a rien
+   * soulevé, il ne lui est pas servi. On lui dit donc quoi faire, et sur quel
+   * critère choisir sa charge.
+   */
+  if (loadSpec?.kind === 'forme' && load.source === 'aucune') {
+    notes.push(
+      slot.exId === 'pin-squat'
+        ? // Le Pin Squat se règle au RPE, pas à la vitesse : le message du
+          // RDL et du Push Press ne lui convient pas.
+          'Première fois sur le Pin Squat : choisis la charge qui donne le RPE cible, avec ' +
+            'l’arrêt complet sur les sécurités. L’appli retient ton niveau et fait progresser ' +
+            'les semaines suivantes à partir de là.'
+        : 'Première fois sur ce mouvement : choisis ta charge toi-même, celle qui respecte la ' +
+            'consigne de vitesse. L’appli retient ton niveau et fait progresser le reste des douze ' +
+            'semaines à partir de là.',
+    );
+  }
+
+  if (loadSpec?.kind === 'pct1RM' && load.source === 'aucune') {
+    notes.push(
+      `Charge non calculée : le programme demande ${loadSpec.pct} % de ton 1RM, et il n’est pas ` +
+        `encore mesuré. Le combine initial le teste — ou saisis-le dans Réglages.`,
+    );
+  }
+
+  // 5. Progression §11 — suggestion uniquement.
+  const suggestion =
+    load.kg === null
+      ? null
+      : applyProgression({
+          // Même matière que la charge affichée : une suggestion calculée sur
+          // la semaine de deload proposerait de « progresser » depuis 90 kg.
+          history: reference,
+          /*
+           * Le plan BRUT, pas la charge recalée.
+           *
+           * `applyProgression` ajoute lui-même le décalage (`plannedKg +
+           * offset`). Lui passer une charge qui le contient déjà l'ajouterait
+           * une seconde fois : +35 deviendrait +70, et la suggestion
+           * s'éloignerait de la réalité à chaque semaine.
+           *
+           * Deux chemins, une seule vérité : le décalage est appliqué à
+           * l'affichage par `shiftLoad`, et §11 le recalcule à l'identique
+           * pour poser son ajustement par-dessus.
+           */
+          plannedKg: planKg ?? load.kg,
+          targetRPE,
+          step: load.step,
+          isLowerBody: LOWER_BODY_FN.has(def.fn),
+          // Même unité que l'affichage : une case en pourcentage reporte
+          // l'écart en proportion, pas en kilos.
+          enPourcentage: loadSpec.kind === 'pct1RM' && load.shape !== 'added',
+          // §8 prescrit la semaine de deload : §11 n'a rien à proposer dessus.
+          isDeload: o.isDeload,
+          ...(load.kgMax !== undefined ? { kgMax: load.kgMax } : {}),
+        });
+
+  if (suggestion?.capped) {
+    adjustments.push({
+      source: 'plafond',
+      what: `${load.kgMax} kg`,
+      why: 'Plafond assumé pour cet exercice sur ce bloc : le programme ne demande pas plus.',
+    });
+  }
+
+  const contrastWith =
+    (slot as Slot & { __contrastWith?: string }).__contrastWith ??
+    (o.contrast?.heavy === slot.exId ? o.contrast.explosive : undefined);
+
+  return {
+    def,
+    id: def.id,
+    name: def.name,
+    sets,
+    work,
+    load,
+    targetRPE,
+    restSec: slot.restSec,
+    loadLine: formatLoadLine(sets, work, load),
+    planKg,
+    lastKg: lastCompleted(reference)?.kg ?? null,
+    lastMeasure:
+      [...(o.ctx.history[def.id] ?? [])].reverse().find((h) => h.measure != null)?.measure ?? null,
+    notes,
+    ...(contrastWith && o.contrast ? { contrast: o.contrast } : {}),
+    ...(slot.ramp ? { ramp: slot.ramp } : {}),
+    ...(slot.superset ? { superset: slot.superset } : {}),
+    ...(slot.blocMinutes !== undefined ? { blocMinutes: slot.blocMinutes } : {}),
+    suggestion,
+    adjustments,
+  };
+}
+
+function capRPE(target: RPETarget | null, max: number): RPETarget | null {
+  if (!target) return null;
+  if (target.max <= max) return target;
+  return {
+    min: Math.min(target.min, max),
+    max,
+    label: `RPE ≤ ${String(max).replace('.', ',')}`,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Feu tricolore
+// ---------------------------------------------------------------------------
+
+const BIG = new Set<string>(BIG_MOVEMENT_IDS);
+
+function isBigMovement(ex: ResolvedExercise): boolean {
+  return BIG.has(ex.id) || ex.def.role === 'main';
+}
+
+/** ORANGE — −5 % sur les gros mouvements, une série de moins sur les accessoires. */
+function applyOrange(exercises: ResolvedExercise[]): ResolvedExercise[] {
+  return exercises.map((ex) => {
+    const out = { ...ex, adjustments: [...ex.adjustments] };
+
+    if (isBigMovement(ex) && ex.load.kg !== null) {
+      const before = ex.load.kg;
+      out.load = scaleLoad(ex.load, READINESS_THRESHOLDS.orange.mainLoadFactor);
+      out.adjustments.push({
+        source: 'orange',
+        what: `${before} → ${out.load.kg} kg`,
+        why: 'Readiness orange : −5 % sur les gros mouvements (§4).',
+      });
+      if (ex.suggestion?.suggestedKg != null) {
+        out.suggestion = {
+          ...ex.suggestion,
+          suggestedKg: roundToStep(
+            ex.suggestion.suggestedKg * READINESS_THRESHOLDS.orange.mainLoadFactor,
+            ex.load.step,
+          ),
+        };
+      }
+    }
+
+    if (ex.def.role === 'accessory' && out.sets > 1) {
+      const before = out.sets;
+      out.sets = Math.max(1, out.sets + READINESS_THRESHOLDS.orange.accessorySetsDelta);
+      out.adjustments.push({
+        source: 'orange',
+        what: `${before} → ${out.sets} séries`,
+        why: 'Readiness orange : une série de moins sur les accessoires (§4).',
+      });
+    }
+
+    return out;
+  });
+}
+
+/**
+ * ROUGE — « pas de travail RPE 8+. Technique à 65 % sur le lift principal
+ * (3 × 3), tronc, mobilité, et tu rentres. »
+ *
+ * Tout ce qui est explosif disparaît : §5 interdit déjà de faire de la
+ * puissance quand la performance est basse, et le readiness rouge dit
+ * précisément ça.
+ */
+function applyRed(exercises: ResolvedExercise[], ctx: SessionContext): ResolvedExercise[] {
+  const out: ResolvedExercise[] = [];
+
+  for (const brut of exercises) {
+    /*
+     * Jour rouge en semaines 5 à 7 : le lundi revient au BACK SQUAT.
+     *
+     * Le Pin Squat n'a pas de 1RM — c'est voulu, ses charges ne dépendent
+     * d'aucun maximum. Sans ce retour, la règle « lift principal à 3 × 3 à
+     * 65 % du 1RM » (§4) n'avait rien sur quoi calculer, et le lift
+     * principal DISPARAISSAIT de la séance. Lui appliquer 65 % du 1RM du back
+     * squat aurait été le coefficient back squat → pin squat que Guillaume a
+     * exclu. Décision de Guillaume : back squat 3 × 3 à 65 %, la règle du §4
+     * mot pour mot, sur le seul mouvement dont le 1RM est connu.
+     */
+    const ex: ResolvedExercise =
+      brut.id === 'pin-squat'
+        ? {
+            ...brut,
+            def: EXERCISES['back-squat']!,
+            id: 'back-squat',
+            name: EXERCISES['back-squat']!.name,
+            // La charge de ce jour se calcule sur le 1RM du back squat : elle
+            // n'a plus rien à voir avec la forme de référence du Pin Squat.
+            load: { ...brut.load, source: '1rm' },
+            lastKg: null,
+            lastMeasure: null,
+            adjustments: [
+              ...brut.adjustments,
+              {
+                source: 'rouge',
+                what: 'Back Squat à la place du Pin Squat',
+                why: 'Readiness rouge : séance technique sur le back squat, le seul squat dont le 1RM est mesuré (§4).',
+              },
+            ],
+          }
+        : brut;
+    const rmKey = ONE_RM_FOR[ex.id];
+
+    if (ex.def.role === 'main' && rmKey) {
+      const oneRM = ctx.settings.oneRM[rmKey];
+      const kg =
+        oneRM === undefined
+          ? null
+          : roundToStep(oneRM * READINESS_THRESHOLDS.red.pctOf1RM, ex.load.step);
+      out.push({
+        ...ex,
+        sets: READINESS_THRESHOLDS.red.sets,
+        work: {
+          kind: 'reps',
+          reps: READINESS_THRESHOLDS.red.reps,
+          perSide: false,
+        },
+        load: withKg(ex.load, kg),
+        targetRPE: null,
+        suggestion: null,
+        notes: [
+          ...ex.notes,
+          oneRM === undefined
+            ? 'Renseigne ton 1RM dans les réglages pour que l’appli calcule les 65 %.'
+            : `65 % de ton 1RM testé (${oneRM} kg). Technique et vitesse, rien d’autre.`,
+        ],
+        adjustments: [
+          ...ex.adjustments,
+          {
+            source: 'rouge',
+            what: `3 × 3 × ${kg ?? '—'} kg`,
+            why: 'Readiness rouge : technique à 65 % du 1RM (§4).',
+          },
+        ],
+      });
+      continue;
+    }
+
+    // On garde le tronc et la mobilité, on retire tout le reste.
+    if (ex.def.role === 'core' || ex.def.fn === 'mobility') {
+      out.push(ex);
+    }
+  }
+
+  return out;
+}
+
+/** §11 cas 7 — lifts principaux à 3 séries, suppression du conditioning. */
+function applyCase7(exercises: ResolvedExercise[]): ResolvedExercise[] {
+  return exercises
+    .filter((ex) => ex.def.role !== 'conditioning')
+    .map((ex) => {
+      if (ex.def.role !== 'main' || ex.sets <= 3) return ex;
+      return {
+        ...ex,
+        sets: 3,
+        adjustments: [
+          ...ex.adjustments,
+          {
+            source: 'cas7' as const,
+            what: `${ex.sets} → 3 séries`,
+            why: 'Tes sauts baissent depuis 2 semaines : §11 cas 7.',
+          },
+        ],
+      };
+    });
+}

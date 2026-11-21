@@ -1,0 +1,494 @@
+/*
+ * Jetons de design — NFL CLASSIC PREMIUM.
+ *
+ * Contraintes inchangées, et elles priment sur l'esthétique : lu à un mètre,
+ * sous les néons d'une salle, une main, écran peut-être mouillé. Fond sombre,
+ * contrastes élevés, aucun gris pâle sur gris, cibles tactiles de 48 px.
+ *
+ * Tout ce qui se règle visuellement est ici. Une seule valeur à changer pour
+ * modifier l'appli entière — c'est ce qui permettra d'ajouter plus tard une
+ * autre identité sans rien reconstruire.
+ *
+ * ── Les contrastes ont été MESURÉS, pas supposés ───────────────────────────
+ *
+ * Texte principal sur fond, sur carte et sur carte secondaire : 17,2 / 13,6 /
+ * 12,7 — AAA partout. Texte secondaire : 7,7 et 7,2 — AAA. Blanc sur le rouge
+ * d'action : 5,4 — AA. Le rouge d'action sur fond sombre ne tombe qu'à 3,4 :
+ * il est donc une couleur de FOND de bouton, jamais une couleur de petit
+ * texte.
+ */
+
+/*
+ * ── Les thèmes ─────────────────────────────────────────────────────────────
+ *
+ * POWER est le thème par DÉFAUT, et c'est volontaire : l'application est née
+ * avec lui, et le nommer sans le déplacer garantit qu'aucun pixel ne bouge.
+ * `:root` et `[data-theme='power']` portent donc exactement les mêmes valeurs.
+ *
+ * Les autres univers ne redéfinissent que les COULEURS. Les tailles, les
+ * espacements, les rayons, les polices et les cibles tactiles restent communs :
+ * ils viennent des contraintes de la salle — lu à un mètre, une main, écran
+ * peut-être mouillé — et ces contraintes ne changent pas avec le programme.
+ */
+
+:root,
+[data-theme='power'] {
+  /* ----------------------------------------------------------------- fonds */
+  /* Bleu nuit profond : le ciel d'un stade éclairé, vu depuis la pelouse. */
+  --bg: #061426;
+  --bg-2: #0b2038;
+  --surface: #102a46;
+  --surface-2: #192f49;
+  --surface-3: #213a56;
+
+  /*
+   * Deux bordures, et la distinction compte.
+   *
+   * `--line` sépare des lignes dans une liste : décoratif, aucun seuil de
+   * contraste à tenir. `--line-strong` dessine le contour d'un CONTRÔLE —
+   * bouton, champ, onglet — et doit atteindre 3:1 pour rester perceptible.
+   * Les confondre rendait les boutons secondaires invisibles sur carte.
+   */
+  --line: #35516b;
+  --line-strong: #4f7699;
+
+  /* ----------------------------------------------------------------- texte */
+  --ink: #f5f7fa;
+  --ink-2: #aebecd;
+  --ink-3: #8fa6bc; /* libellés non essentiels — 5,8:1, reste lisible */
+  --ink-on-accent: #ffffff;
+
+  /* ------------------------------------------------- couleur d'action */
+  /*
+   * Le rouge est la couleur de ce qu'on FAIT : valider, ouvrir, confirmer.
+   * Il n'est jamais seul à porter un statut — voir le feu tricolore ci-dessous.
+   */
+  --accent: #d50a20;
+  --accent-bright: #f01432;
+  --accent-deep: #a80718;
+  --accent-dim: #4a0a12;
+
+  /*
+   * Le rouge d'action est un FOND, jamais un petit texte : #d50a20 sur le
+   * fond marine ne fait que 3,4:1, et l'ancien accent ambré que ce rouge
+   * remplace en faisait 10,5. Tous les endroits qui écrivaient en accent
+   * (le chrono, les badges, les « + ajouter », les lettres de superset)
+   * passent donc par --accent-ink, un rouge éclairci qui tient 4,5:1 sur les
+   * quatre fonds du système : 7,4 sur --bg, 5,8 sur --surface, 5,4 sur
+   * --surface-2, 4,6 sur --surface-3.
+   *
+   * Sur un fond CLAIR c'est l'inverse : --accent y fait 5,4:1 et reste le
+   * bon choix (bouton blanc du bandeau de mise à jour).
+   */
+  --accent-ink: #ff7a85;
+  /* Accent posé sur --surface : voir la note de --accent-ink-fort plus bas. */
+  --accent-ink-fort: #ff7a85;
+
+  /* ------------------------------------------------------ feu tricolore (§4) */
+  /*
+   * Le rouge d'ALERTE n'est pas le rouge d'ACTION, et la teinte ne suffit pas
+   * à les distinguer : à côté d'un bouton rouge, un badge rouge se lit comme
+   * un second bouton. La readiness ROUGE se différencie donc par son texte,
+   * son icône et sa présentation (bandeau bordé), jamais par la seule couleur.
+   *
+   * Les règles de calcul et de déclenchement de §4 ne sont pas touchées.
+   */
+  --vert: #3ddc84;
+  --orange: #ff9f1c;
+  --rouge: #ff5a4d;
+
+  /* Bleu de progression, pour ce qui se mesure sans se juger. */
+  --bleu: #3478c0;
+  /*
+   * Le bleu des DONNÉES. Même raison que --accent-ink : une barre ou une
+   * courbe est un graphique porteur de sens et doit tenir 3:1 sur son fond.
+   * --bleu n'en fait que 3,2 sur le fond et 2,6 sur une carte ; celui-ci
+   * tient 6,3 sur une carte.
+   */
+  --bleu-ink: #6fb0ef;
+
+  /* ------------------------------------------------------------- macros */
+  /*
+   * Trois teintes catégorielles, validées sur --surface-2 : bande de
+   * luminosité, plancher de chroma, séparation daltonienne et contraste.
+   * Choisies LOIN du feu tricolore et de --accent : une barre de macros n'est
+   * ni une alerte ni un bouton.
+   */
+  --macro-glucides: #3d8dc9;
+  --macro-proteines: #cf5a86;
+  --macro-lipides: #a87b22;
+
+  /* --------------------------------------------------------- blocs (§2) */
+  /*
+   * Un seul jeton ici, et c'est voulu.
+   *
+   * Les couleurs des six blocs vivent dans `BLOCKS` (src/data/program.ts) :
+   * les écrans les lisent de là et les passent en `--bloc` au cas par cas.
+   * Les cinq autres jetons qui doublaient cette table n'étaient référencés
+   * nulle part — deux sources pour une même couleur, dont une morte.
+   *
+   * Celui-ci reste parce qu'il sert vraiment : le vert « test » marque, dans
+   * la carte média d'un exercice, la vidéo de RÉFÉRENCE — celle qui ne bouge
+   * pas. Ce n'est pas la couleur du bloc de test, c'est la même idée.
+   */
+  --bloc-test: #7ac4a0;
+
+  /* -------------------------------------------------------- typographie */
+  --font: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  /* Barlow Condensed est embarqué dans le projet (voir styles/fonts.css) :
+     sans réseau, le repli système garde la mise en page lisible. */
+  --font-cond: 'Barlow Condensed', 'Roboto Condensed', 'Arial Narrow', var(--font);
+
+  --fs-display: clamp(2.5rem, 13vw, 3.75rem); /* « SEMAINE 8 » */
+  --fs-load: clamp(2.25rem, 11vw, 3.25rem); /* la ligne de charge */
+  --fs-timer: clamp(2.75rem, 14vw, 4rem); /* le chrono */
+  --fs-title: 1.5rem;
+  --fs-body: 1rem;
+  --fs-small: 0.875rem;
+  --fs-micro: 0.6875rem;
+
+  /* Titres de retransmission : condensés, capitales, légèrement resserrés. */
+  --track-display: 0.01em;
+  --track-eyebrow: 0.18em;
+
+  /* ----------------------------------------------------------- géométrie */
+  --tap: 48px; /* cible tactile minimale, non négociable */
+  --radius: 14px;
+  --radius-sm: 10px;
+  --radius-lg: 18px;
+  --gap: 12px;
+  --pad: 16px;
+
+  /* Ombres sobres : de la profondeur, pas du relief. */
+  /*
+   * Le voile posé sur les photos d'en-tête, et l'ombre du titre par-dessus.
+   *
+   * Exprimés en composantes pour pouvoir servir à plusieurs opacités. C'était
+   * la seule couleur encore écrite en dur dans l'application — cinq fois dans
+   * `ScreenHeader.module.css` — et c'est elle qui rendait un en-tête clair
+   * impossible : un voile bleu nuit sous un texte sombre ne laisse rien lire.
+   */
+  /*
+   * Le texte le plus affirmé qui existe — celui d'un élément sélectionné,
+   * posé sur une surface et non sur l'accent. Il valait `#fff` en dur à deux
+   * endroits, ce qui marchait tant que tous les fonds étaient sombres.
+   */
+  --ink-fort: #ffffff;
+  --voile: 6 20 38;
+  --ombre-titre: 0 2px 12px rgb(0 0 0 / 45%);
+
+  --shadow-card: 0 1px 0 rgb(255 255 255 / 4%) inset, 0 6px 18px rgb(0 0 0 / 35%);
+  --shadow-action: 0 6px 18px rgb(213 10 32 / 32%);
+
+  /* --- Hauteur réservée en bas pour la barre de chrono + la navigation --- */
+  --bottom-space: calc(76px + env(safe-area-inset-bottom, 0px));
+}
+
+/*
+ * ── DCROSS-FIT — l'identité de la plateforme ───────────────────────────────
+ *
+ * Graphite dominant, anthracite, blanc, rouge sportif en accent.
+ *
+ * Ce bloc existe parce que la plateforme n'avait pas d'identité : l'accueil,
+ * le catalogue et le parcours empruntaient le thème de POWER 12 — bleu nuit,
+ * et une photo de stade en tête d'écran. On ne distinguait plus Dcross-fit du
+ * seul programme qu'il hébergeait, ce qui était défendable à un programme et
+ * ne l'est plus à trois familles.
+ *
+ * Les valeurs sont relevées dans la maquette fournie par Guillaume, pas
+ * choisies : le graphite de fond, l'anthracite des cartes et le rouge de la
+ * barre de progression viennent de l'image, échantillonnés au pixel.
+ *
+ * Le rouge est volontairement le MÊME ton que celui de POWER : c'est le rouge
+ * de la marque, pas celui d'un programme. Ce qui distingue les deux univers
+ * est le fond — graphite neutre ici, bleu nuit là-bas.
+ */
+[data-theme='dcross'] {
+  --bg: #0c0e11;
+  --bg-2: #101317;
+  --surface: #16191e;
+  --surface-2: #1c2026;
+  --surface-3: #23272e;
+
+  --line: #2a2f36;
+  --line-strong: #3b414a;
+
+  --ink: #ffffff;
+  --ink-2: #b9c0c9;
+  --ink-3: #8a929c;
+  --ink-on-accent: #ffffff;
+
+  --accent: #da1d28;
+  --accent-bright: #ef3b45;
+  --accent-deep: #a8141d;
+  --accent-dim: #3a1418;
+  --accent-ink: #ef5058;
+  --accent-ink-fort: #ef5058;
+
+  --vert: #2fae63;
+  --orange: #e08a2b;
+  --rouge: #e4444c;
+  --bleu: #4b8fd0;
+  --bleu-ink: #7fb2e4;
+
+  --macro-glucides: #4b8fd0;
+  --macro-proteines: #d4728f;
+  --macro-lipides: #c49a3a;
+  --bloc-test: #da1d28;
+
+  /* Le voile des en-têtes : le graphite du fond, en composantes séparées. */
+  --ink-fort: #ffffff;
+  --voile: 12 14 17;
+  --ombre-titre: 0 1px 10px rgb(12 14 17 / 85%);
+
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 40%);
+  --shadow-action: 0 6px 20px rgb(0 0 0 / 45%);
+}
+
+/*
+ * ── MASS — prise de masse & congestion ─────────────────────────────────────
+ *
+ * Historique, pour ne pas le refaire : une palette crème (visuel de marque),
+ * puis une palette CLAIRE ardoise/blanc/rouge relevée dans l'application MASS
+ * que Guillaume utilisait. Le 14 novembre, il a fourni des maquettes MASS
+ * sombres et tranché : elles s'appliquent à toute la famille. Les anciennes
+ * valeurs ne sont pas gardées en commentaire — une palette morte finit par
+ * être réveillée par erreur.
+ *
+ * Le rouge reste l'accent : c'est le choix explicite de Guillaume, relevé dans
+ * ses maquettes. Aucun composant n'a de couleur en dur : toute la bascule
+ * clair → sombre tient dans ces jetons.
+ */
+[data-theme='mass'] {
+  /*
+   * ── MASS — l'identité des maquettes de Guillaume (14 novembre) ──────────
+   *
+   * Sombre, presque noir, et rouge : « Accueil / Semaine / Séance / Combiné
+   * MASS ». Le thème clair d'ardoise qu'il remplace n'avait pas été dessiné,
+   * celui-ci l'est. Il vaut pour TOUTE la famille (FORCE et CONGESTION) :
+   * seul l'habillage change, aucun contenu sportif.
+   *
+   * Contrastes MESURÉS :
+   *
+   *                      bg      surface   surface-2   surface-3
+   *   --ink            17,9       16,3        15,0        13,6    AAA partout
+   *   --ink-2          10,4        9,4         8,7         7,9    AAA partout
+   *   --ink-3           6,6        6,0         5,6         5,0    AA+ partout
+   *   --accent-ink      7,1        6,5         6,0         5,4    AA+ partout
+   *   --rouge           6,4        5,8         5,4         4,9    AA partout
+   *
+   * Blanc sur --accent (boutons) : 5,11. Le rouge plein ne porte jamais de
+   * petit texte sur le fond (3,85:1) : il trace les filets, les bordures et
+   * les « // » des titres ; le texte rouge passe par --accent-ink.
+   */
+  --bg: #0b0b0d;
+  --bg-2: #111214;
+  --surface: #16171a;
+  --surface-2: #1d1f23;
+  --surface-3: #25272c;
+
+  --line: #2e3036;
+  --line-strong: #464953;
+
+  --ink: #f4f4f5;
+  --ink-2: #b9bcc4;
+  --ink-3: #9196a0; /* libellés non essentiels — 5,0:1 au pire */
+  --ink-on-accent: #ffffff;
+
+  --accent: #d71f26;
+  --accent-bright: #ff2b33;
+  --accent-deep: #a3161c;
+  --accent-dim: #3a0d10;
+
+  --accent-ink: #ff6b70;
+  --accent-ink-fort: #ff6b70;
+
+  /* Couleurs d'état : celles de POWER, mesurées ici (ligne --rouge ci-dessus). */
+  --vert: #3ddc84;
+  --orange: #ff9f1c;
+  --rouge: #ff5a4d;
+  --bleu: #3478c0;
+  --bleu-ink: #6fb0ef;
+
+  --macro-glucides: #3d8dc9;
+  --macro-proteines: #cf5a86;
+  --macro-lipides: #a87b22;
+  --bloc-test: #d71f26;
+
+  --ink-fort: #ffffff;
+  --voile: 11 11 13;
+  --ombre-titre: 0 2px 12px rgb(0 0 0 / 55%);
+
+  --shadow-card: 0 1px 0 rgb(255 255 255 / 4%) inset, 0 6px 18px rgb(0 0 0 / 45%);
+  --shadow-action: 0 6px 18px rgb(215 31 38 / 35%);
+}
+
+/*
+ * ── FEMMES — l'identité est posée ──────────────────────────────────────────
+ *
+ * Elle ne l'a pas été par supposition : Guillaume a fourni des maquettes, et
+ * ce bloc les TRANSCRIT. Le §4 interdisait d'inventer une identité ; il
+ * n'interdit pas de transcrire celle qui a été décidée. Le §15 est donc
+ * honoré — l'identité a été choisie, puis écrite.
+ *
+ * Le registre est le synthwave : nuit violette, néon magenta, coucher de
+ * soleil sur une ville de bord de mer. Rien à voir avec le « rose par
+ * défaut » que ce bloc refusait : c'est un parti pris assumé, et il est
+ * SOMBRE, ce qui le garde compatible avec la contrainte d'origine — lu à un
+ * mètre, sous les néons d'une salle, écran peut-être mouillé.
+ *
+ * ── Les contrastes sont MESURÉS, comme partout ailleurs ────────────────────
+ *
+ *                      bg      surface   surface-2   surface-3
+ *   --ink            17,5       15,4        13,5        11,6    AAA partout
+ *   --ink-2          11,1        9,7         8,6         7,3    AAA partout
+ *   --ink-3           7,5        6,6         5,8         5,0    AA+ partout
+ *   --accent-ink      8,2        7,2         6,3         5,4    AA+ partout
+ *
+ * ── Pourquoi --accent n'est PAS le rose fluo des maquettes ─────────────────
+ *
+ * Le magenta #ff2d95 des maquettes ne porte que 3,46:1 sous du texte blanc —
+ * sous le seuil de 4,5. Le descendre à #d1006e le remonte à 5,34 tout en
+ * restant franchement magenta. Le fluo n'est pas perdu pour autant : il vit
+ * dans --accent-bright, où il fait ce qu'il fait le mieux — les lueurs, les
+ * bordures actives, les dégradés — sans jamais passer sous du petit texte.
+ *
+ * Les couleurs d'état sont héritées de POWER sans modification : mesurées sur
+ * ce violet, elles donnent 10,6 / 9,3 / 6,2 / 7,6 sur le fond. Les redéfinir
+ * aurait été du zèle.
+ */
+[data-theme='femmes'] {
+  /* --------------------------------------------------------------- fonds */
+  /*
+   * ÉCHANTILLONNÉS dans la planche de référence, pas choisis à l'œil.
+   *
+   * La version précédente descendait à #160a26, un violet presque noir.
+   * Guillaume l'a jugée « trop sombre, trop terne » : les relevés lui
+   * donnent raison, la référence vit entre #250c44 et #462271 — un violet
+   * profond mais SATURÉ, qui laisse les cartes se détacher sans les
+   * éclaircir.
+   */
+  /*
+   * ── Les cartes sont plus CLAIRES que le fond, pas plus sombres ─────────
+   *
+   * C'était le défaut central de la version précédente, et il se mesure :
+   * son fond dominait à #2A0D51 et ses cartes à #1E073D — donc plus
+   * sombres que la page. La référence fait l'inverse, fond #2F0E50 et
+   * cartes #50206B. D'où l'impression, juste, d'une interface « terne » :
+   * les surfaces s'enfonçaient au lieu de se détacher.
+   *
+   * Valeurs relevées sur l'écran 4 de la planche fournie.
+   */
+  --bg: #2e0b55;
+  --bg-2: #3a1460;
+  --surface: #3b1763;
+  --surface-2: #5c2a78;
+  --surface-3: #692d93;
+
+  --line: #8b35a3;
+  /* 3,63:1 sur la carte : au-dessus des 3,0 exigés d'un contour de contrôle. */
+  --line-strong: #9a5cc8;
+
+  /* --------------------------------------------------------------- texte */
+  --ink: #ffffff;
+  --ink-2: #d9c2ef;
+  --ink-3: #b795d8;
+  --ink-on-accent: #ffffff;
+
+  /* ----------------------------------------------------- couleur d'action */
+  --accent: #f7017f;
+  --accent-bright: #fc3ec4;
+  --accent-deep: #c4006a;
+  --accent-dim: #3d0a33;
+  /* Le magenta qu'on ÉCRIT : 7,3:1 sur le fond, 5,1 sur la carte la plus claire. */
+  --accent-ink: #ff79c8;
+  --accent-ink-fort: #ff79c8;
+
+  /* Le cyan des commandes secondaires : 9,2:1 sur la carte. */
+  --cyan-femmes: #38d6ef;
+
+  --ink-fort: #ffffff;
+  --voile: 37 12 68;
+  --ombre-titre: 0 1px 8px rgb(37 12 68 / 85%);
+
+  /*
+   * ── Les DÉGRADÉS, relevés point par point ──────────────────────────────
+   *
+   * Ils n'existent QUE sur ce thème : partout où ils servent, ils s'écrivent
+   * `var(--grad-x, <la valeur plate d'avant>)`. POWER et MASS prennent le
+   * repli et ne bougent pas — vérifié à 0 pixel près sur cinq écrans.
+   */
+  /* Relevé sur la planche : #2e0b55 entre les cartes, #200842 en bas de page. */
+  --grad-fond: linear-gradient(to bottom, #2e0b55 0%, #2a0a4f 55%, #200842 100%);
+
+  /* Bouton d'action : dégradé VERTICAL, comme la référence. */
+  --grad-accent: linear-gradient(to bottom, #fc3ec4 0%, #fa1691 45%, #f7017f 100%);
+
+  /* Relevé sur la planche : #4d1a6f en haut de carte, #33165e en bas. */
+  --grad-surface: linear-gradient(to bottom, #4d1a6f 0%, #3b1763 42%, #31145a 100%);
+
+  /* Le fondu du bandeau : les 48 derniers pour cent se dissolvent dans la page. */
+  --masque-fond: linear-gradient(
+    to bottom,
+    #000 0%,
+    #000 52%,
+    rgb(0 0 0 / 72%) 76%,
+    rgb(0 0 0 / 28%) 91%,
+    transparent 100%
+  );
+}
+
+/*
+ * PERSONNALISÉ — volontairement vide, comme FEMMES, mais pas pour la même
+ * raison : un programme apporté par quelqu'un d'autre n'a pas d'identité
+ * visuelle à lui. Hériter du thème de la plateforme est le bon défaut, et
+ * ce bloc existe pour qu'on sache où poser autre chose si on change d'avis.
+ */
+[data-theme='perso'] {
+  /* Hérite du thème de base. */
+}
+
+/*
+ * Les valeurs de l'identité MASS validée (14 novembre), rangées UNE fois.
+ *
+ * Relevées sur les écrans Semaine, Combiné et Séance validés par Guillaume ;
+ * ce n'est pas une palette nouvelle, c'est un rangement. Déclarées sur
+ * `:root` et non sous `[data-theme='mass']` : le combiné MASS s'ouvre aussi
+ * depuis le catalogue, sous le thème de la plateforme, et doit les trouver.
+ * Seuls les styles MASS les lisent ; POWER et FEMMES les ignorent.
+ */
+:root {
+  /* Titres : argent poli, blanc en haut, cassure grise sous le milieu. */
+  --mass-argent: linear-gradient(180deg, #ffffff 0%, #f1f1f1 44%, #a3a4a5 56%, #c9cacb 100%);
+  --mass-ombre-titre: drop-shadow(0 2px 6px rgb(0 0 0 / 60%));
+
+  /* Le rouge des accents (traits, icônes, bords d'alerte) et son halo. */
+  --mass-rouge: #e3141c;
+  --mass-halo-trait: 0 0 8px rgb(227 20 28 / 40%);
+
+  /* Boutons d'action (Démarrer, fiche) et choix actifs (Combiné). */
+  --mass-rouge-bord: #ff3b42;
+  --mass-degrade-action: linear-gradient(180deg, #e0121c 0%, #b40b16 50%, #7d070e 100%);
+  --mass-degrade-choix: linear-gradient(180deg, #d8121c 0%, #a50c15 55%, #7d070e 100%);
+  --mass-liseret-action: inset 0 1px 0 rgb(255 255 255 / 22%);
+  --mass-liseret-choix: inset 0 1px 0 rgb(255 255 255 / 18%);
+
+  /* Cartes anthracite, et le liseré lumineux de leur bord haut. */
+  --mass-carte-fond: linear-gradient(180deg, #1b1b1c 0%, #111112 100%);
+  --mass-carte-bord: #3c3d3e;
+  --mass-liseret: inset 0 1px 0 rgb(255 255 255 / 7%);
+
+  /* Choix inactifs, curseurs et champs : sombres, bordés. */
+  --mass-sombre-fond: linear-gradient(180deg, #262627 0%, #121213 100%);
+  --mass-sombre-bord: #5b5c5d;
+  --mass-curseur-fond: linear-gradient(180deg, #2a2a2b 0%, #151516 100%);
+  --mass-curseur-bord: #4a4b4c;
+  --mass-champ-fond: linear-gradient(180deg, #1d1d1e 0%, #121213 100%);
+
+  /* Puces de choix (semaines, débuts/fins) : écran Semaine validé. */
+  --mass-puce-fond: linear-gradient(180deg, #242424 0%, #111 100%);
+  --mass-puce-bord: #3a3a3b;
+  --mass-puce-on-fond: linear-gradient(180deg, #570e11 0%, #8e0c13 55%, #d0111a 100%);
+  --mass-puce-on-bord: #c5262c;
+  --mass-puce-on-halo: 0 0 16px rgb(226 10 17 / 45%);
+}

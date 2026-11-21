@@ -1,0 +1,392 @@
+import { useEffect, useMemo, useState } from 'react';
+import { BarChart, LineChart, type Series } from '../components/Chart';
+import { resolveLoad } from '../engine/loadResolver';
+import { NotesBrowser } from '../components/NotesBrowser';
+import { SessionDurations } from '../components/SessionDurations';
+import { POWER12 } from '../programmes/power12';
+import { VisualTracking } from '../components/VisualTracking';
+import { WeightOverview } from '../components/WeightOverview';
+import { EXERCISES } from '../data/exercises';
+import { prescriptionFor } from '../data/mainLiftTable';
+import { DAY_LABELS_SHORT, type MainLiftId } from '../data/types';
+import { fr } from '../engine/format';
+import { explosiveTrend, weeklyBests } from '../engine/trends';
+import type { HistoryIndex, SessionContext } from '../engine/types';
+import {
+  allReadiness,
+  allSessions,
+  allSets,
+  buildHistoryIndex,
+  getSettingsRow,
+  toEngineSettings,
+  toReadinessRecords,
+} from '../db/repo';
+import type { ReadinessRow, SessionRow, SetRow } from '../db/db';
+import { Icon } from '../components/Icon';
+import { ScreenHeader } from '../components/ScreenHeader';
+import styles from './Progress.module.css';
+
+/** Les cinq lifts que le programme teste et suit (§13). */
+const LIFTS: Array<{ id: MainLiftId; label: string }> = [
+  { id: 'back-squat', label: 'Squat' },
+  { id: 'bench-press', label: 'Bench' },
+  { id: 'deadlift', label: 'Deadlift' },
+  { id: 'weighted-pullup', label: 'Tractions' },
+  { id: 'push-press', label: 'Push Press' },
+];
+
+/**
+ * L'écran répond à une seule question — « est-ce que ça bouge ? » — par trois
+ * moyens : les charges, le poids de corps et l'œil. Un sélecteur en haut plutôt
+ * que huit sections empilées : les courbes se consultent le soir, les photos une
+ * fois par semaine, on ne veut pas faire défiler les unes pour atteindre les
+ * autres.
+ *
+ * Le poids a sa propre vue et pas une carte de plus sous les charges : il porte
+ * son propre sélecteur de période, deux graphiques et un tableau de treize
+ * lignes. Empilé sous le reste, on ne l'aurait jamais atteint au pouce.
+ */
+type Vue = 'chiffres' | 'poids' | 'remarques' | 'photos';
+
+/** Le sous-titre de l'en-tête suit la vue choisie. */
+const SOUS_TITRES: Record<Vue, string> = {
+  chiffres: 'Charges réelles contre plan',
+  poids: 'Poids de corps depuis le combine',
+  remarques: 'Tes notes, de la plus récente',
+  photos: 'Une photo par semaine',
+};
+
+export function ProgressScreen() {
+  const [vue, setVue] = useState<Vue>('chiffres');
+  const [data, setData] = useState<{
+    history: HistoryIndex;
+    readiness: ReadinessRow[];
+    sets: SetRow[];
+    sessions: SessionRow[];
+    baseline: number | null;
+    oneRM: Record<string, number>;
+    ctx: SessionContext;
+  } | null>(null);
+  const [lift, setLift] = useState<MainLiftId>('deadlift');
+
+  useEffect(() => {
+    void (async () => {
+      const [sets, readiness, settingsRow, sessions] = await Promise.all([
+        allSets(),
+        allReadiness(),
+        getSettingsRow(),
+        allSessions(),
+      ]);
+      const history = buildHistoryIndex(sets);
+      setData({
+        history,
+        readiness,
+        sets,
+        sessions,
+        baseline: settingsRow.broadJumpBaselineCm,
+        oneRM: settingsRow.oneRM,
+        /*
+         * La durée prévue d'une séance se calcule depuis la séance RÉSOLUE :
+         * elle dépend des règles de bloc, du deload, des séries réellement
+         * prescrites. On reconstruit donc le même contexte que l'écran Séance ;
+         * la readiness, elle, est posée séance par séance par le composant.
+         */
+        ctx: {
+          settings: toEngineSettings(settingsRow),
+          history,
+          readiness: null,
+          explosiveDecline: explosiveTrend(toReadinessRecords(readiness)).declining,
+        },
+      });
+    })();
+  }, []);
+
+  const trend = useMemo(
+    () => (data ? explosiveTrend(toReadinessRecords(data.readiness)) : null),
+    [data],
+  );
+
+  if (!data) return <div className={styles.loading}>Chargement…</div>;
+
+  /*
+   * --- charge réelle vs plan, semaine par semaine --------------------------
+   *
+   * La courbe « Plan » se RÉSOUT, elle ne se lit plus. Le §9 donne des
+   * pourcentages depuis qu'il ne sert plus les kilos de son auteur : lire
+   * `load.kg` sur la prescription ne renvoyait donc plus rien, et la courbe
+   * prévisionnelle avait disparu de l'écran sans que rien ne le signale.
+   *
+   * On la résout SANS historique, volontairement : un objectif ne se réécrit
+   * pas quand une performance l'a dépassé. Le plan de la semaine 6 reste ce
+   * qu'il annonçait au départ, et c'est précisément ce qui rend l'écart
+   * lisible.
+   */
+  const planPoints = [];
+  for (let w = 1; w <= 12; w++) {
+    const p = prescriptionFor(lift, w);
+    if (!p?.load) continue;
+    const resolu = resolveLoad(p.load, { settings: data.ctx.settings, occurrences: [] });
+    if (resolu.kg !== null) planPoints.push({ x: w, y: resolu.kg });
+  }
+  const exId = LIFTS.find((l) => l.id === lift)!.id;
+  const realPoints = (data.history[exId] ?? [])
+    .filter((o) => o.kg !== null)
+    .map((o) => ({ x: o.week, y: o.kg! }));
+
+  const liftSeries: Series[] = [
+    { label: 'Plan', color: 'var(--ink-3)', points: planPoints, dashed: true },
+    { label: 'Réel', color: 'var(--accent-ink)', points: realPoints },
+  ];
+
+  /*
+   * L'écart au plan, sur la DERNIÈRE semaine où les deux existent.
+   *
+   * Pas sur la semaine en cours : une semaine commencée mais pas encore
+   * travaillée n'a pas de réel, et afficher « −90 kg » parce que rien n'est
+   * saisi serait un mensonge. Pas non plus une moyenne sur douze semaines :
+   * ce qu'on veut savoir en ouvrant l'écran, c'est où on en est maintenant.
+   */
+  const ecart = (() => {
+    const plans = new Map(planPoints.map((p) => [p.x, p.y]));
+    let derniere: { semaine: number; plan: number; reel: number } | null = null;
+    for (const r of realPoints) {
+      const plan = plans.get(r.x);
+      if (plan === undefined) continue;
+      if (derniere === null || r.x >= derniere.semaine) {
+        derniere = { semaine: r.x, plan, reel: r.y };
+      }
+    }
+    if (derniere === null) return null;
+    const delta = Math.round((derniere.reel - derniere.plan) * 10) / 10;
+    return { ...derniere, delta };
+  })();
+
+  // --- broad jump dans le temps --------------------------------------------
+  const jumps = weeklyBests(toReadinessRecords(data.readiness));
+  const jumpSeries: Series[] = [
+    {
+      label: 'Meilleur saut',
+      color: 'var(--vert)',
+      points: jumps.map((j) => ({ x: j.week, y: j.cm })),
+    },
+  ];
+  if (data.baseline !== null && jumps.length > 0) {
+    jumpSeries.unshift({
+      label: 'Référence',
+      color: 'var(--ink-3)',
+      dashed: true,
+      points: [
+        { x: jumps[0]!.week, y: data.baseline },
+        { x: jumps[jumps.length - 1]!.week, y: data.baseline },
+      ],
+    });
+  }
+
+  // --- RPE moyen par séance -------------------------------------------------
+  const bySession = new Map<string, { sum: number; n: number; week: number; day: number }>();
+  for (const s of data.sets) {
+    if (s.actualRpe === null) continue;
+    const key = `${s.week}-${s.day}`;
+    const cur = bySession.get(key) ?? {
+      sum: 0,
+      n: 0,
+      week: s.week,
+      day: s.day,
+    };
+    cur.sum += s.actualRpe;
+    cur.n += 1;
+    bySession.set(key, cur);
+  }
+  const rpeBars = [...bySession.values()]
+    .sort((a, b) => a.week - b.week || a.day - b.day)
+    .slice(-12)
+    .map((v) => ({
+      label: `${v.week}${DAY_LABELS_SHORT[v.day as 0 | 1 | 2 | 3 | 4][0]}`,
+      value: Math.round((v.sum / v.n) * 10) / 10,
+      /*
+       * Bleu pour une séance ordinaire, rouge pour une séance encaissée à 9
+       * ou plus. Les deux étaient rouges : un rouge vif contre un rouge
+       * clair, impossible à séparer d'un coup d'œil alors que c'est tout ce
+       * qu'on cherche sur ce graphique. La nuance ne porte plus seule — le
+       * sous-titre dit déjà ce que signifie une barre rouge.
+       */
+      color: v.sum / v.n >= 9 ? 'var(--rouge)' : 'var(--bleu-ink)',
+    }));
+
+  const weeksX = Object.fromEntries(
+    Array.from({ length: 12 }, (_, i) => [i + 1, i % 2 === 0 ? `S${i + 1}` : '']),
+  );
+
+  return (
+    <div className={styles.screen}>
+      <ScreenHeader
+        eyebrow="12 semaines"
+        title="Progression"
+        subtitle={SOUS_TITRES[vue]}
+        visuel="sprint"
+      />
+
+      <div className={styles.segment} role="group" aria-label="Vue">
+        {(
+          [
+            ['chiffres', 'Charges'],
+            ['poids', 'Poids'],
+            ['remarques', 'Remarques'],
+            ['photos', 'Photos'],
+          ] as const
+        ).map(([id, label]) => (
+          <button
+            key={id}
+            type="button"
+            className={`${styles.segmentButton} ${vue === id ? styles.segmentOn : ''}`}
+            onClick={() => setVue(id)}
+            aria-pressed={vue === id}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {vue === 'poids' && <WeightOverview />}
+
+      {vue === 'remarques' && <NotesBrowser />}
+
+      {vue === 'photos' && <VisualTracking />}
+
+      {vue === 'chiffres' && (
+        <>
+          {trend?.declining && (
+            <p className={styles.alert}>
+              <span className={styles.alertIcon} aria-hidden="true">
+                <Icon name="alert" size="18px" />
+              </span>
+              <span>{trend.message}</span>
+            </p>
+          )}
+
+          <div className={styles.lifts} role="group" aria-label="Mouvement suivi">
+            {LIFTS.map((l) => (
+              <button
+                key={l.id}
+                type="button"
+                className={`${styles.lift} ${lift === l.id ? styles.liftOn : ''}`}
+                onClick={() => setLift(l.id)}
+                aria-pressed={lift === l.id}
+              >
+                {l.label}
+              </button>
+            ))}
+          </div>
+
+          <section className={styles.card}>
+            <h2 className={styles.cardTitle}>
+              <span className={styles.cardIcon} aria-hidden="true">
+                <Icon name="chart" size="20px" />
+              </span>
+              {EXERCISES[lift]?.name}
+            </h2>
+            <p className={styles.cardSub}>Charge travaillée semaine par semaine, contre le plan.</p>
+            {realPoints.length === 0 ? (
+              <p className={styles.cardSub}>Rien d’enregistré pour l’instant.</p>
+            ) : (
+              <p className={styles.cardValeur}>
+                {fr(realPoints[realPoints.length - 1]!.y)} kg <small>dernière charge</small>
+              </p>
+            )}
+            {ecart !== null && (
+              <p className={styles.ecart}>
+                <span>
+                  Semaine {ecart.semaine} — objectif {fr(ecart.plan)} kg
+                </span>
+                <span>réalisé {fr(ecart.reel)} kg</span>
+                <span
+                  className={`${styles.ecartValeur} ${
+                    ecart.delta > 0
+                      ? styles.ecartAvance
+                      : ecart.delta < 0
+                        ? styles.ecartRetard
+                        : styles.ecartEgal
+                  }`}
+                >
+                  {ecart.delta > 0 ? '+' : ecart.delta < 0 ? '−' : ''}
+                  {fr(Math.abs(ecart.delta))} kg
+                  <span className="visually-hidden">
+                    {ecart.delta > 0
+                      ? ' au-dessus du plan'
+                      : ecart.delta < 0
+                        ? ' en dessous du plan'
+                        : ' — pile sur le plan'}
+                  </span>
+                </span>
+              </p>
+            )}
+            {planPoints.length === 0 && (
+              <p className={styles.cardSub}>
+                Pas de courbe prévisionnelle : le plan est un pourcentage de ton 1RM, et il n’est
+                pas encore mesuré. Le combine initial le teste — ou saisis-le dans Réglages.
+              </p>
+            )}
+            <LineChart
+              series={liftSeries}
+              xLabels={weeksX}
+              unit="kg"
+              emptyMessage="Valide des séries pour voir la courbe apparaître."
+            />
+          </section>
+
+          <section className={styles.card}>
+            <h2 className={styles.cardTitle}>
+              <span className={styles.cardIcon} aria-hidden="true">
+                <Icon name="arrow-up" size="20px" />
+              </span>
+              Broad jump
+            </h2>
+            <p className={styles.cardSub}>
+              Meilleur saut de chaque semaine. Deux baisses de suite déclenchent le cas 7 du
+              programme.
+            </p>
+            <LineChart
+              series={jumpSeries}
+              xLabels={weeksX}
+              unit="cm"
+              emptyMessage="Aucun readiness test enregistré."
+            />
+          </section>
+
+          <section className={styles.card}>
+            <h2 className={styles.cardTitle}>
+              <span className={styles.cardIcon} aria-hidden="true">
+                <Icon name="stopwatch" size="20px" />
+              </span>
+              Durée des séances
+            </h2>
+            <p className={styles.cardSub}>
+              Mesurée entre la première ouverture de la séance et « Séance terminée ». Le trait
+              clair sur la barre marque la durée prévue.
+            </p>
+            <SessionDurations
+              rows={data.sessions}
+              readinessRows={data.readiness}
+              baselineCm={data.baseline}
+              ctx={data.ctx}
+              programme={POWER12}
+            />
+          </section>
+
+          <section className={styles.card}>
+            <h2 className={styles.cardTitle}>
+              <span className={styles.cardIcon} aria-hidden="true">
+                <Icon name="alert" size="20px" />
+              </span>
+              RPE moyen par séance
+            </h2>
+            <p className={styles.cardSub}>
+              Les 12 dernières séances. Une barre rouge signale une séance encaissée à 9 ou plus.
+            </p>
+            <BarChart bars={rpeBars} emptyMessage="Aucun RPE saisi pour l’instant." />
+          </section>
+        </>
+      )}
+    </div>
+  );
+}

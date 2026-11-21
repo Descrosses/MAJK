@@ -1,0 +1,502 @@
+import { useEffect, useState } from 'react';
+import { Stepper, stepValue } from '../components/Stepper';
+import { EXERCISES } from '../data/exercises';
+import {
+  COMBINE_METRICS,
+  COMBINE_S8_METRICS,
+  RAMPS,
+  RAMPS_S12,
+  cibleFor,
+} from '../data/testSessions';
+import { fr } from '../engine/format';
+import { LOWER_IS_BETTER, SANS_JUGEMENT, ecartCombine } from '../engine/combineEcart';
+import { allCombines, getSettingsRow, saveCombine } from '../db/repo';
+import type { CombinePhase, CombineRow } from '../db/db';
+import { Icon } from '../components/Icon';
+import { ScreenHeader } from '../components/ScreenHeader';
+import styles from './Combine.module.css';
+
+const PHASES: Array<{ id: CombinePhase; label: string; when: string }> = [
+  { id: 'initial', label: 'Initial', when: 'Avant la semaine 1' },
+  { id: 's8', label: 'Intermédiaire', when: 'Semaine 8, sans 1RM' },
+  { id: 'final', label: 'Final', when: 'Semaine 12' },
+];
+
+/**
+ * Réglages du stepper par unité de mesure.
+ *
+ * Le pas du chrono est de 0,1 s : sur un 10 m, deux séances peuvent se jouer à
+ * un dixième, et un pas plus gros effacerait le progrès qu'on cherche à voir.
+ * Pour un temps relevé à la vidéo au centième, la saisie clavier prend le
+ * relais — chaque mesure de cet écran l'accepte.
+ */
+const MEASURE = {
+  cm: { step: 5, min: 50, max: 400, unit: 'cm' },
+  s: { step: 0.1, min: 0.5, max: 60, unit: 's' },
+  m: { step: 5, min: 5, max: 200, unit: 'm' },
+  kg: { step: 2.5, min: 0, max: 300, unit: 'kg' },
+  reps: { step: 1, min: 0, max: 60, unit: 'reps' },
+} as const;
+
+/**
+ * De la mesure du combine vers la colonne du tableau de charges.
+ *
+ * La correspondance est écrite, pas déduite : « test-squat-1rm » donnait
+ * « squat » en retirant les affixes, alors que la colonne s'appelle
+ * « back-squat ». Les paliers du squat et du bench ne s'affichaient donc
+ * jamais — sans erreur, juste rien.
+ */
+const RAMP_KEY: Record<string, keyof typeof RAMPS | undefined> = {
+  'test-squat-1rm': 'back-squat',
+  'test-bench-1rm': 'bench-press',
+  'test-deadlift-1rm': 'deadlift',
+  'test-weighted-pullup-1rm': 'weighted-pullup',
+  'test-push-press-1rm': 'push-press',
+};
+
+/**
+ * Les mesures que le §12 ne demande PAS en semaine 8 : les cinq 1RM.
+ *
+ * ── Pourquoi elles sont quand même saisissables ───────────────────────────
+ *
+ * Le programme a raison de ne pas les demander : la semaine 8 est un deload,
+ * et un maximum au milieu annule le deload qu'elle sert à produire. L'écran
+ * le dit, et continue de le dire.
+ *
+ * Mais une appli de suivi n'est pas un surveillant. Quand quelqu'un a tiré
+ * un maximum, le chiffre existe ; refuser de l'écrire ne l'efface pas, ça
+ * l'envoie dans un carnet que l'application ne lira jamais. Entre « noter un
+ * maximum pris en deload » et « perdre une mesure réelle », le second est
+ * pire : il rend l'historique faux par omission.
+ *
+ * ELLES SONT DONC SÉPARÉES, pas mélangées. Leur propre section, en bas, sous
+ * un titre qui dit ce qu'elles sont. Le protocole reste le protocole ; ce qui
+ * s'est passé reste ce qui s'est passé.
+ */
+const HORS_PROTOCOLE_S8 = COMBINE_METRICS.filter((m) => !COMBINE_S8_METRICS.includes(m));
+
+/**
+ * Ce qu'on a déjà mesuré quand on saisit une phase.
+ *
+ * Le tableau de comparaison est en haut de l'écran, et c'est bien — mais on
+ * saisit en bas, un champ à la fois, souvent debout dans la salle avec le
+ * téléphone dans une main. Remonter pour savoir ce qu'on avait fait en
+ * semaine 0, c'est perdre sa place et, en pratique, ne pas comparer du tout.
+ *
+ * Chaque champ porte donc son propre rappel.
+ */
+const ANTERIEURES: Record<CombinePhase, readonly CombinePhase[]> = {
+  initial: [],
+  s8: ['initial'],
+  final: ['initial', 's8'],
+};
+
+export function CombineScreen() {
+  const [rows, setRows] = useState<CombineRow[] | null>(null);
+  const [phase, setPhase] = useState<CombinePhase>('initial');
+  const [draft, setDraft] = useState<Record<string, number | null>>({});
+  /** Poids de corps des Réglages : il ne se mesure pas en salle (§12). */
+  const [settingsBodyweight, setSettingsBodyweight] = useState<number | null>(null);
+
+  useEffect(() => {
+    void (async () => {
+      setRows(await allCombines());
+      setSettingsBodyweight((await getSettingsRow()).bodyweightKg);
+    })();
+  }, []);
+
+  useEffect(() => {
+    if (!rows) return;
+    setDraft(rows.find((r) => r.phase === phase)?.metrics ?? {});
+  }, [rows, phase]);
+
+  if (!rows) return <div className={styles.loading}>Chargement…</div>;
+
+  const metrics = phase === 's8' ? COMBINE_S8_METRICS : COMBINE_METRICS;
+  const byPhase = (p: CombinePhase) => rows.find((r) => r.phase === p)?.metrics ?? {};
+
+  async function save() {
+    await saveCombine(phase, { metrics: draft, date: new Date().toISOString().slice(0, 10) });
+    setRows(await allCombines());
+  }
+
+  // §13 — « Le vrai critère : l'écart deadlift − squat. »
+  const gap = (p: CombinePhase) => {
+    const m = byPhase(p);
+    const dl = m['test-deadlift-1rm'];
+    const sq = m['test-squat-1rm'];
+    return typeof dl === 'number' && typeof sq === 'number' ? dl - sq : null;
+  };
+  const gapInitial = gap('initial');
+  const gapFinal = gap('final');
+  const gapNow = gapFinal ?? gapInitial;
+
+  /*
+   * Une carte de saisie. Extraite de la boucle parce qu'elle sert
+   * maintenant à DEUX listes en semaine 8 : les mesures du protocole, et
+   * celles qu'on a faites en dehors.
+   */
+  const carte = (id: string, horsProtocole = false) => {
+    const def = EXERCISES[id];
+    if (!def) return null;
+    const cfg = MEASURE[def.measure ?? 'reps'];
+    /*
+     * Les paliers du test final ne sont pas ceux du test initial : ils sont
+     * calculés sur les maxima mesurés ce jour-là. Montrer ceux du §12 en
+     * semaine 12 ferait monter le squat à 130 pour un 1RM de 110.
+     */
+    /*
+     * Aucun palier sur une mesure hors protocole : ceux du test initial ont
+     * été écrits pour la semaine 0, sur les maxima estimés d'alors. Les
+     * afficher en semaine 8, sur un corps en deload, proposerait une montée
+     * que personne n'a calculée pour ce jour-là.
+     */
+    const cle = horsProtocole ? undefined : RAMP_KEY[id];
+    const ramp = cle ? (phase === 'final' ? RAMPS_S12 : RAMPS)[cle] : undefined;
+    return (
+      <section key={id} className={styles.card}>
+        <h3 className={styles.cardTitle}>{def.name}</h3>
+        <p className={styles.cardSub}>{def.intent}</p>
+        {ramp && (
+          <p className={styles.fieldHint}>
+            <b>Paliers :</b>{' '}
+            {ramp
+              .map(
+                (r) =>
+                  `${r.added ? '+' : ''}${fr(r.kg)}${r.reps > 1 ? `×${r.reps}` : ''}${
+                    r.optional ? ' ?' : ''
+                  }`,
+              )
+              .join(' / ')}
+          </p>
+        )}
+        {id === 'test-bodyweight' && (
+          <p className={styles.fieldHint}>
+            Relevé à la maison, pas en salle : moyenne de 3 matins à jeun. Il se saisit aussi dans
+            Réglages, à n’importe quel moment.
+          </p>
+        )}
+        <Reference
+          id={id}
+          unit={cfg.unit}
+          anterieures={ANTERIEURES[phase].map((ph) => ({
+            label: PHASES.find((x) => x.id === ph)!.label,
+            valeur: byPhase(ph)[id],
+          }))}
+          saisi={draft[id] ?? null}
+        />
+        <div className={styles.stepperZone}>
+          <Stepper
+            label={def.name}
+            value={draft[id] ?? null}
+            step={cfg.step}
+            min={cfg.min}
+            max={cfg.max}
+            unit={cfg.unit}
+            tone="accent"
+            onStep={(d) =>
+              setDraft((prev) => ({
+                ...prev,
+                [id]: stepValue(prev[id] ?? null, d, cfg.min, cfg.max),
+              }))
+            }
+            onCommit={(v) => setDraft((prev) => ({ ...prev, [id]: v }))}
+          />
+        </div>
+        {id === 'test-bodyweight' &&
+          settingsBodyweight !== null &&
+          draft[id] !== settingsBodyweight && (
+            <button
+              type="button"
+              className={styles.secondary}
+              onClick={() => setDraft((prev) => ({ ...prev, [id]: settingsBodyweight }))}
+            >
+              Reprendre {fr(settingsBodyweight)} kg des Réglages
+            </button>
+          )}
+      </section>
+    );
+  };
+
+  return (
+    <div className={styles.screen}>
+      <ScreenHeader
+        eyebrow="Trois mesures comparables"
+        title="Combine"
+        subtitle="Mêmes conditions à chaque fois"
+        visuel="combinePower"
+      />
+
+      <p className={styles.hint}>
+        Même lieu, mêmes chaussures, même protocole, idéalement même heure. C’est ce qui rend les
+        trois combines comparables.
+      </p>
+
+      <div className={styles.phases} role="group" aria-label="Combine affiché">
+        {PHASES.map((p) => (
+          <button
+            key={p.id}
+            type="button"
+            className={`${styles.phase} ${phase === p.id ? styles.phaseOn : ''}`}
+            onClick={() => setPhase(p.id)}
+            aria-pressed={phase === p.id}
+          >
+            <span className={styles.phaseNom}>{p.label}</span>
+            <span className={styles.phaseQuand}>{p.when}</span>
+          </button>
+        ))}
+      </div>
+
+      {/* --- L'indicateur clé du programme -------------------------------- */}
+      <section className={styles.card}>
+        <h2 className={styles.cardTitle}>
+          <span className={styles.cardIcon} aria-hidden="true">
+            <Icon name="chart" size="20px" />
+          </span>
+          Écart deadlift − squat
+        </h2>
+        <p className={styles.cardSub}>
+          Le vrai critère du programme. S’il devient nul ou positif, la chaîne postérieure a
+          rattrapé son retard.
+        </p>
+        <div className={styles.keyStat}>
+          <div
+            className={styles.keyStatValue}
+            style={{
+              color:
+                gapNow === null ? 'var(--ink-3)' : gapNow >= 0 ? 'var(--vert)' : 'var(--orange)',
+            }}
+          >
+            {gapNow === null ? '—' : `${gapNow > 0 ? '+' : ''}${fr(gapNow)} kg`}
+          </div>
+          <div className={styles.keyStatLabel}>{gapLabel(byPhase, gapInitial, gapFinal)}</div>
+        </div>
+      </section>
+
+      {/* --- Comparaison des trois combines -------------------------------- */}
+      <section className={styles.card}>
+        <h2 className={styles.cardTitle}>
+          <span className={styles.cardIcon} aria-hidden="true">
+            <Icon name="swap" size="20px" />
+          </span>
+          Comparaison
+        </h2>
+        <p className={styles.cardSub}>
+          La flèche suit le chiffre, la couleur dit si c’est un progrès : en vert, c’est mieux, même
+          quand la valeur baisse — un sprint plus court est un sprint plus rapide.
+        </p>
+        <div className={styles.tableScroll}>
+          <table className={styles.table}>
+            <thead>
+              <tr>
+                <th>Mesure</th>
+                <th>Initial</th>
+                <th>S8</th>
+                <th>Final</th>
+                <th>Cible</th>
+              </tr>
+            </thead>
+            <tbody>
+              {COMBINE_METRICS.map((id) => {
+                const i = byPhase('initial')[id];
+                const s = byPhase('s8')[id];
+                const f = byPhase('final')[id];
+                const better =
+                  typeof i === 'number' && typeof f === 'number' && !SANS_JUGEMENT.has(id)
+                    ? LOWER_IS_BETTER.has(id)
+                      ? f < i
+                      : f > i
+                    : null;
+                /*
+                 * La flèche suit le NOMBRE, pas le jugement. Sur un sprint,
+                 * passer de 1,82 à 1,74 est une progression mais la valeur
+                 * descend : une flèche vers le haut y contredirait le chiffre
+                 * écrit juste à côté. C'est la couleur, doublée du mot caché,
+                 * qui dit si c'est bien.
+                 */
+                const monte =
+                  typeof i === 'number' && typeof f === 'number' && f !== i ? f > i : null;
+                return (
+                  <tr key={id}>
+                    <td>{EXERCISES[id]?.name ?? id}</td>
+                    <td>{typeof i === 'number' ? fr(i) : '—'}</td>
+                    <td>{typeof s === 'number' ? fr(s) : '—'}</td>
+                    <td
+                      className={better === null ? '' : better ? styles.deltaUp : styles.deltaDown}
+                    >
+                      {monte !== null && (
+                        <span className={styles.fleche} aria-hidden="true">
+                          {monte ? '↑' : '↓'}
+                        </span>
+                      )}
+                      {typeof f === 'number' ? fr(f) : '—'}
+                      {better !== null && (
+                        <span className="visually-hidden">
+                          {better ? ' — progression' : ' — recul'}
+                        </span>
+                      )}
+                    </td>
+                    {/*
+                      L'objectif se calcule sur CE qu'a fait l'utilisateur au
+                      combine initial, pas sur les maxima de l'auteur. Sans
+                      performance initiale il n'y a rien à calculer — et on
+                      l'écrit, plutôt que de servir un chiffre qui ne veut
+                      rien dire pour celui qui le lit.
+                    */}
+                    <td className={styles.cible}>
+                      {cibleFor(id, typeof i === 'number' ? i : null) ?? (
+                        <span className={styles.aDefinir}>à définir</span>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      {/* --- Saisie guidée -------------------------------------------------- */}
+      <h2 className={styles.sectionTitle}>
+        Saisie · {PHASES.find((p) => p.id === phase)!.label}
+        <span className={styles.sectionRule} aria-hidden="true" />
+      </h2>
+      {phase === 's8' && (
+        <p className={styles.hint}>
+          {/*
+            Dire CE QUI MANQUE, et pas seulement qu'il manque quelque chose.
+            « Pas de 1RM » laissait chercher : les tractions lestées
+            disparaissent de l'écran et les tractions strictes restent, ce qui
+            se lit comme un remplacement alors que c'est une absence voulue.
+          */}
+          <b>Pas de 1RM cette semaine</b> (§12) : ni squat, ni bench, ni deadlift, ni tractions
+          lestées, ni push press. La semaine 8 est un deload — un maximum au milieu l’annulerait.
+          Tests athlétiques et séries max ; les 1RM reviennent en semaine 12. Si tu en as fait un
+          quand même, il se note plus bas, dans <b>Hors protocole</b>.
+        </p>
+      )}
+
+      {metrics.map((id) => carte(id))}
+
+      {/*
+        LES MESURES FAITES EN DEHORS DU PROTOCOLE.
+        Voir le commentaire au-dessus de HORS_PROTOCOLE_S8.
+      */}
+      {phase === 's8' && (
+        <>
+          <h2 className={styles.sectionTitle}>
+            Hors protocole
+            <span className={styles.sectionRule} aria-hidden="true" />
+          </h2>
+          <p className={styles.hint}>
+            Le §12 ne demande aucun de ces tests en semaine 8, et c’est toujours vrai. Mais si tu en
+            as fait un, il se note <b>ici</b> plutôt que nulle part. Il apparaîtra dans la colonne
+            S8 du tableau, avec le reste.
+          </p>
+          {HORS_PROTOCOLE_S8.map((id) => carte(id, true))}
+        </>
+      )}
+
+      <button type="button" className={styles.primary} onClick={() => void save()}>
+        <Icon name="check" size="22px" />
+        Enregistrer le combine
+      </button>
+    </div>
+  );
+}
+
+/**
+ * Le rappel posé au-dessus d'un champ de saisie : ce qu'on avait fait avant,
+ * et de combien on s'en écarte.
+ *
+ * L'ÉCART SE COMPTE TOUJOURS DEPUIS L'INITIAL, jamais depuis la mesure
+ * précédente. C'est le repère du §13 : les cibles sont des progressions sur
+ * douze semaines, pas sur quatre. Un écart lu depuis la semaine 8 dirait
+ * autre chose que l'objectif affiché deux écrans plus haut.
+ *
+ * Il s'affiche aussi en pourcentage, parce que c'est l'unité du §13 — « +5 à
+ * 8 % », « −2 à 4 % » — et que personne ne fait cette division de tête entre
+ * deux séries.
+ */
+function Reference({
+  id,
+  unit,
+  anterieures,
+  saisi,
+}: {
+  id: string;
+  unit: string;
+  anterieures: ReadonlyArray<{ label: string; valeur: number | null | undefined }>;
+  saisi: number | null;
+}) {
+  const connues = anterieures.filter(
+    (a): a is { label: string; valeur: number } => typeof a.valeur === 'number' && a.valeur > 0,
+  );
+  if (connues.length === 0) return null;
+
+  const e = ecartCombine(id, connues[0]!.valeur, saisi);
+  return (
+    <div className={styles.reference}>
+      <p className={styles.referenceLigne}>
+        {connues.map((a) => (
+          <span key={a.label}>
+            {a.label} <b>{`${fr(a.valeur)} ${unit}`}</b>
+          </span>
+        ))}
+      </p>
+      {e !== null && (
+        <p
+          className={`${styles.referenceEcart} ${
+            e.mieux === null ? '' : e.mieux ? styles.ecartUp : styles.ecartDown
+          }`}
+        >
+          {e.ecart === 0
+            ? `Identique à ${connues[0]!.label.toLowerCase()}`
+            : `${signe(e.ecart)} ${unit} · ${signe(Math.round(e.pct * 10) / 10)} % depuis ${connues[0]!.label.toLowerCase()}`}
+        </p>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Un écart s'écrit avec son signe, toujours.
+ *
+ * La légende écrivait « au départ -10 kg, aujourd'hui 6 kg » sous un chiffre
+ * affiché « +6 kg » : le même nombre apparaissait deux fois, une fois signé et
+ * une fois non. Sur l'indicateur central du programme, c'est le genre de
+ * détail qui fait douter du reste.
+ */
+function signe(v: number): string {
+  return `${v > 0 ? '+' : ''}${fr(v)}`;
+}
+
+/**
+ * Légende de l'écart deadlift − squat.
+ *
+ * Elle affichait une phrase écrite en dur — « Départ : deadlift 130, squat
+ * 140, soit −10 kg » — qui étaient les estimations d'avant le combine. Le
+ * chiffre au-dessus, lui, venait des vrais tests. Deux sources pour un même
+ * indicateur, et la légende contredisait le nombre qu'elle expliquait.
+ *
+ * Tout vient désormais des combines enregistrés, et rien d'autre.
+ */
+function gapLabel(
+  byPhase: (p: CombinePhase) => Record<string, number | null>,
+  gapInitial: number | null,
+  gapFinal: number | null,
+): string {
+  if (gapInitial === null && gapFinal === null) {
+    return 'Saisis un deadlift et un squat 1RM pour le calculer.';
+  }
+  if (gapInitial !== null && gapFinal !== null) {
+    return `Au départ ${signe(gapInitial)} kg, aujourd’hui ${signe(gapFinal)} kg.`;
+  }
+  const m = byPhase('initial');
+  const dl = m['test-deadlift-1rm'];
+  const sq = m['test-squat-1rm'];
+  if (typeof dl === 'number' && typeof sq === 'number') {
+    return `Combine initial : deadlift ${fr(dl)}, squat ${fr(sq)}, soit ${signe(gapInitial!)} kg.`;
+  }
+  return 'Mesuré au combine final. Saisis le combine initial pour voir la progression.';
+}

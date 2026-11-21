@@ -1,0 +1,2860 @@
+/* Écran séance : tout ce qui se lit et se saisit entre deux séries. */
+
+.screen {
+  padding: 0 0 var(--bottom-space);
+}
+
+/* ---------------------------------------------------------------- en-tête -- */
+
+/*
+ * En-tête de séance.
+ *
+ * Pas de photo ici, et c'est délibéré. L'écran fait déjà 10 000 px de haut et
+ * se consulte entre deux séries, essoufflé : chaque pixel donné à l'ambiance
+ * est un pixel de défilement en plus avant d'atteindre sa charge. L'identité
+ * passe par la typographie et le filet rouge, pas par une image.
+ */
+.header {
+  position: relative;
+  overflow: hidden;
+  padding: var(--pad) var(--pad) 14px;
+  border-bottom: 1px solid var(--line);
+  background: linear-gradient(180deg, var(--bg-2) 0%, var(--bg) 100%);
+}
+
+/*
+ * Le retour. Cible pleine hauteur : c'est le seul bouton de navigation de
+ * l'écran, et on l'atteint avec le pouce d'une main qui tient encore la barre.
+ */
+.back {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: var(--tap);
+  margin-left: -8px;
+  padding: 0 8px;
+  color: var(--ink-2);
+  font-family: var(--font-cond);
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+/*
+ * Le titre, dans la même langue que les autres écrans : capitales condensées
+ * légèrement penchées, suivies d'un filet rouge.
+ */
+.title {
+  margin-top: 2px;
+  color: var(--ink);
+  font-family: var(--font-cond);
+  font-size: clamp(1.75rem, 8.5vw, 2.375rem);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: var(--track-display);
+  text-transform: uppercase;
+  transform: skewX(-6deg);
+  transform-origin: left bottom;
+}
+
+.titleRule {
+  display: block;
+  width: 64px;
+  height: 4px;
+  margin-top: 12px;
+  border-radius: 2px;
+  background: var(--accent-bright);
+  clip-path: polygon(0 0, 100% 0, calc(100% - 4px) 100%, 0 100%);
+}
+
+/*
+ * La ligne de méta. Chaque information dans sa propre pastille : en vrac sur
+ * une ligne, « Lundi lundi 5 octobre Prévu ≈ 75 min » formait une bouillie où
+ * rien ne se trouvait du regard.
+ */
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.metaItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  color: var(--ink-2);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.metaItem b {
+  color: var(--ink);
+  font-weight: 700;
+}
+
+/*
+ * L'intensité porte la couleur du bloc par une PASTILLE, pas par un aplat.
+ * Même règle que sur Semaine et Aujourd'hui : rempli, ce badge se lisait
+ * comme un bouton rouge à presser.
+ */
+.tag {
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.tag::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--bloc, var(--ink-3));
+}
+
+/*
+ * Intertitre d'un bloc d'un programme importé (« SEANCE ABDOS ») : les
+ * cartes qui suivent viennent de cette partie du document. POWER et MASS
+ * n'en posent pas.
+ */
+.sectionImportee {
+  margin: 22px var(--pad) 4px;
+  color: var(--ink-3);
+  font-family: var(--font-cond);
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.note {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--grad-surface, var(--surface));
+  border-left: 3px solid var(--line);
+  font-size: var(--fs-small);
+  color: var(--ink-2);
+}
+
+/* ------------------------------------------------------------ sections -- */
+
+.section {
+  margin: var(--gap) var(--pad);
+  background: var(--grad-surface, var(--surface));
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.sectionHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  padding: 12px var(--pad);
+  text-align: left;
+  font-weight: 700;
+  font-size: 1.0625rem;
+}
+
+.sectionCount {
+  font-size: var(--fs-small);
+  font-weight: 600;
+  color: var(--ink-2);
+}
+
+/* ------------------------------------------------------- échauffement -- */
+
+.warmupItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 0 var(--pad);
+  min-height: var(--tap);
+  text-align: left;
+  border-top: 1px solid var(--line);
+}
+
+.box {
+  flex: 0 0 26px;
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  border: 2px solid var(--ink-3);
+  display: grid;
+  place-items: center;
+  font-size: 16px;
+  color: var(--ink-on-accent);
+}
+
+.boxOn {
+  background: var(--vert);
+  border-color: var(--vert);
+}
+
+.warmupLabel {
+  flex: 1;
+}
+
+.warmupDone .warmupLabel {
+  color: var(--ink-3);
+  text-decoration: line-through;
+}
+
+.warmupDetail {
+  color: var(--ink-2);
+  font-size: var(--fs-small);
+}
+
+/* Un mouvement avec sa consigne en phrase : la case reste en haut, la
+   consigne passe sous le libellé. */
+.warmupItemLong {
+  align-items: flex-start;
+  padding-top: 12px;
+  padding-bottom: 12px;
+}
+
+.warmupItemLong .box {
+  margin-top: 1px;
+}
+
+.warmupConsigne {
+  display: block;
+  margin-top: 3px;
+  color: var(--ink-2);
+  font-size: var(--fs-small);
+  line-height: 1.4;
+}
+
+.warmupDone .warmupConsigne {
+  text-decoration: none;
+}
+
+/* ------------------------------------------------------------ readiness -- */
+
+.ready {
+  margin: var(--gap) var(--pad);
+  padding: 14px var(--pad);
+  background: var(--grad-surface, var(--surface));
+  border-radius: var(--radius);
+  border-left: 6px solid var(--ink-3);
+}
+
+.readyVert {
+  border-left-color: var(--vert);
+}
+.readyOrange {
+  border-left-color: var(--orange);
+}
+.readyRouge {
+  border-left-color: var(--rouge);
+}
+
+.readyTitle {
+  font-size: 1.125rem;
+  font-weight: 700;
+}
+
+.readyHint {
+  margin-top: 4px;
+  color: var(--ink-2);
+  font-size: var(--fs-small);
+}
+
+/* Trois steppers empilés : à 375 px de large, les mettre côte à côte
+   rognerait les boutons sous la barre des 48 px. */
+.jumps {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.readyValidate {
+  width: 100%;
+  height: var(--tap);
+  margin-top: 12px;
+  border-radius: var(--radius-sm);
+  background: var(--accent);
+  color: var(--ink-on-accent);
+  font-weight: 800;
+}
+
+.readyValidate:disabled {
+  background: var(--surface-3);
+  color: var(--ink-3);
+}
+
+.verdict {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  font-size: var(--fs-small);
+}
+
+.verdictLevel {
+  font-size: 1.125rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.levelVert {
+  color: var(--vert);
+}
+.levelOrange {
+  color: var(--orange);
+}
+.levelRouge {
+  color: var(--rouge);
+}
+
+/* -------------------------------------------------------------- exercice -- */
+
+.exercise {
+  margin: var(--gap) var(--pad);
+  background: var(--grad-surface, var(--surface));
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.exerciseDone {
+  opacity: 0.62;
+}
+
+.exHead {
+  padding: 12px var(--pad) 10px;
+}
+
+/* Le nom du mouvement, dans la langue des autres titres de carte. */
+/*
+ * Le nom du mouvement et sa fiche sur la MÊME ligne.
+ *
+ * La fiche était en bas de la carte, après les séries : au moment où on se
+ * demande comment se placer, elle était à deux écrans de défilement. Elle
+ * remonte à côté du nom, là où l'œil arrive déjà. `flex-wrap` la fait
+ * passer dessous quand le nom prend toute la largeur — « Développé militaire
+ * Smith » ne doit pas être écrasé pour lui faire de la place.
+ */
+/*
+ * « Exercice 06 · Explosif », au-dessus du nom. Petites capitales pistées,
+ * comme le sur-titre des en-têtes : un repère, pas un titre.
+ */
+.exRepere {
+  margin: 0 0 2px;
+  color: var(--ink-3);
+  font-family: var(--font-cond);
+  font-size: var(--fs-small);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.exTitreLigne {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.exTitreLigne .exName {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.exName {
+  color: var(--ink);
+  font-family: var(--font-cond);
+  font-size: 1.1875rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  line-height: 1.15;
+}
+
+/* LA ligne. L'élément le plus visible de l'écran. */
+.loadLine {
+  font-family: var(--font-cond);
+  font-size: var(--fs-load);
+  font-weight: 800;
+  line-height: 1.02;
+  letter-spacing: -0.01em;
+  margin-top: 2px;
+}
+
+.exSub {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin-top: 6px;
+  font-size: var(--fs-small);
+  color: var(--ink-2);
+}
+
+.exSub b {
+  color: var(--ink);
+}
+
+.adjust {
+  margin-top: 8px;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  font-size: 0.8125rem;
+  color: var(--ink-2);
+  border-left: 3px solid var(--orange);
+}
+
+.adjustRouge {
+  border-left-color: var(--rouge);
+}
+
+/* La séquence du contraste, sous son titre : une ligne qu'on suit des yeux. */
+.adjustSuite {
+  display: block;
+  margin-top: 2px;
+  color: var(--ink);
+  font-weight: 600;
+}
+
+/* ----------------------------------------------------------- suggestion -- */
+
+.suggestion {
+  margin: 0 var(--pad) 12px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  border: 1px solid var(--accent-dim);
+}
+
+.suggestionText {
+  font-size: var(--fs-small);
+  color: var(--ink-2);
+}
+
+.suggestionActions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.accept,
+.refuse {
+  flex: 1;
+  height: var(--tap);
+  border-radius: var(--radius-sm);
+  font-weight: 700;
+}
+
+.accept {
+  background: var(--accent);
+  color: var(--ink-on-accent);
+}
+
+.refuse {
+  background: var(--surface-3);
+  color: var(--ink);
+}
+
+/* ---------------------------------------------------------------- séries -- */
+
+.sets {
+  border-top: 1px solid var(--line);
+}
+
+.setRow {
+  display: grid;
+  grid-template-columns: 28px 1fr;
+  gap: 10px;
+  align-items: start;
+  padding: 12px var(--pad);
+  border-bottom: 1px solid var(--line);
+}
+
+.setRow:last-child {
+  border-bottom: 0;
+}
+
+.setIndex {
+  font-family: var(--font-cond);
+  font-size: 1.375rem;
+  font-weight: 700;
+  color: var(--ink-3);
+  line-height: 1.6;
+}
+
+.setDone .setIndex {
+  color: var(--vert);
+}
+
+.fields {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+/*
+ * Deux steppers par ligne au maximum : à 375 px, trois côte à côte rognent les
+ * boutons et cassent la règle des 48 px. Reps et charge se lisent ensemble,
+ * le RPE prend la ligne du dessous.
+ */
+.steppers {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.stepperWide {
+  grid-column: 1 / -1;
+}
+
+.validate {
+  height: var(--tap);
+  border-radius: var(--radius-sm);
+  background: var(--accent);
+  color: var(--ink-on-accent);
+  font-weight: 800;
+  font-size: 1.0625rem;
+  width: 100%;
+}
+
+/* Contraste : le second bouton, sous la série lourde validée. Il occupe
+   toute la largeur de la ligne — c'est l'action attendue à ce moment-là. */
+.validateContraste {
+  grid-column: 1 / -1;
+  margin-top: 4px;
+}
+
+.contrasteAide {
+  margin: 6px 0 0;
+  font-size: 0.8125rem;
+  color: var(--ink-3);
+  text-align: center;
+}
+
+.validateDone {
+  background: var(--surface-3);
+  color: var(--ink-2);
+  font-weight: 700;
+}
+
+.setSummary {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: var(--tap);
+  width: 100%;
+  text-align: left;
+}
+
+.setSummaryValue {
+  font-family: var(--font-cond);
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.setSummaryUnit {
+  font-size: 0.8125rem;
+  color: var(--ink-3);
+  font-weight: 600;
+}
+
+.failFlag {
+  margin-left: auto;
+  padding: 4px 10px;
+  border-radius: 6px;
+  background: var(--rouge);
+  color: var(--ink-on-accent);
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.failToggle {
+  align-self: flex-start;
+  padding: 0 12px;
+  height: var(--tap);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  color: var(--ink-2);
+  font-size: var(--fs-small);
+  font-weight: 600;
+}
+
+.failToggleOn {
+  background: var(--rouge);
+  color: var(--ink-on-accent);
+}
+
+/* ------------------------------------------------------------- consignes -- */
+
+.disclosure {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 0 var(--pad);
+  min-height: var(--tap);
+  text-align: left;
+  border-top: 1px solid var(--line);
+  color: var(--ink-2);
+  font-size: var(--fs-small);
+  font-weight: 600;
+}
+
+.cues {
+  padding: 0 var(--pad) 14px;
+  font-size: var(--fs-small);
+  color: var(--ink-2);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cues b {
+  color: var(--ink);
+}
+
+/* ------------------------------------------------------------------ bas -- */
+
+.notes {
+  margin: var(--gap) var(--pad);
+}
+
+.notesField {
+  width: 100%;
+  min-height: 96px;
+  padding: 12px;
+  resize: vertical;
+  line-height: 1.5;
+}
+
+.finish {
+  display: block;
+  width: calc(100% - 2 * var(--pad));
+  margin: 20px var(--pad) 8px;
+  height: 56px;
+  border-radius: var(--radius);
+  background: var(--vert);
+  color: var(--ink-on-accent);
+  font-weight: 800;
+  font-size: 1.125rem;
+}
+
+.finishDone {
+  background: var(--surface-3);
+  color: var(--ink-2);
+}
+
+/* Le geste de côté : visible, mais jamais confondu avec « Séance terminée ». */
+.nonFaite {
+  display: block;
+  width: calc(100% - 2 * var(--pad));
+  margin: 0 var(--pad) 16px;
+  min-height: 46px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: none;
+  color: var(--ink-2);
+  font-weight: 600;
+  font-size: var(--fs-small);
+}
+
+.summary {
+  margin: 0 var(--pad) 24px;
+  padding: 16px var(--pad);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: linear-gradient(135deg, var(--surface) 0%, var(--bg-2) 100%);
+  box-shadow: var(--shadow-card);
+  font-size: var(--fs-small);
+  color: var(--ink-2);
+}
+
+/* Titre de carte, dans la langue des autres écrans. */
+.summary > h2,
+.summary > h3 {
+  color: var(--ink);
+  font-family: var(--font-cond);
+  font-size: 1.1875rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.summary dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 6px 14px;
+  margin: 8px 0 0;
+}
+
+.summary dt {
+  color: var(--ink-3);
+}
+
+.summary dd {
+  margin: 0;
+  color: var(--ink);
+  font-weight: 600;
+}
+
+/*
+ * Le récap des ajustements, sous les chiffres du résumé. Même typographie
+ * que le reste de la carte : un sous-titre condensé, puis une ligne par
+ * exercice — le nom en encre, le détail en texte secondaire.
+ */
+.recapTitre {
+  margin: 14px 0 0;
+  color: var(--ink);
+  font-family: var(--font-cond);
+  font-size: 1.0625rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.recap {
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.recapLigne {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.recapLigne:last-child {
+  border-bottom: 0;
+}
+
+.recapNom {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.recapDetail {
+  color: var(--ink-2);
+  line-height: 1.4;
+}
+
+/* --------------------------------------------------- chrono de séance -- */
+
+/*
+ * Le chrono vit dans la ligne de méta de l'en-tête, avec le jour, la date et
+ * la durée prévue. Petit mais lisible : il se lit d'un coup d'œil entre deux
+ * séries, il n'a pas à attirer l'œil en permanence.
+ */
+.chrono {
+  color: var(--accent-ink);
+}
+
+.summaryRef {
+  color: var(--ink-3);
+  font-weight: 400;
+}
+
+.summaryWarn {
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  border-left: 3px solid var(--accent);
+  border-radius: 6px;
+  background: var(--surface-2, rgba(255, 255, 255, 0.04));
+  color: var(--ink);
+  line-height: 1.45;
+}
+
+.resetClock {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 48px;
+  margin: 14px 0 0;
+  padding: 0 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--ink-2);
+  font-size: var(--fs-small);
+  font-weight: 700;
+}
+
+.resetConfirm {
+  margin: 14px 0 0;
+}
+
+.resetAsk {
+  margin: 0 0 10px;
+  color: var(--ink);
+  line-height: 1.45;
+}
+
+.resetActions {
+  display: grid;
+  gap: 8px;
+}
+
+.resetYes,
+.resetNo {
+  min-height: 48px;
+  border-radius: var(--radius);
+  font-size: var(--fs-small);
+  font-weight: 700;
+}
+
+.resetYes {
+  border: none;
+  background: var(--accent);
+  color: var(--ink-on-accent);
+}
+
+.resetNo {
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink-2);
+}
+
+.loading {
+  padding: 40px var(--pad);
+  color: var(--ink-2);
+  text-align: center;
+}
+
+/* ------------------------------------------- documentation du mouvement -- */
+
+.mediaRow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 8px var(--pad) 0;
+}
+
+/*
+ * 34 px de haut : sous les 44 px de cible tactile, et répété sept fois sur
+ * l'écran. C'étaient les sept seules cibles trop petites de l'application,
+ * toutes sur celui où l'on a les doigts moites.
+ */
+.mediaToggle {
+  min-height: var(--tap);
+  padding: 0 14px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  color: var(--ink-2);
+  font-size: var(--fs-small);
+  font-weight: 700;
+}
+
+.mediaBadge {
+  font-size: 0.75rem;
+  color: var(--ink-3);
+}
+
+.mediaPanel {
+  margin: 10px var(--pad) 0;
+  padding: 12px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+}
+
+.mediaAction {
+  display: block;
+  width: 100%;
+  height: var(--tap);
+  margin-top: 10px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-3);
+  color: var(--ink);
+  font-size: var(--fs-small);
+  font-weight: 700;
+}
+
+.mediaNote {
+  margin-top: 10px;
+  color: var(--ink-2);
+  font-size: var(--fs-small);
+  line-height: 1.5;
+}
+
+.mediaCompare {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+/*
+ * Les deux blocs du panneau de documentation.
+ *
+ * Fiche technique et progression montrent toutes deux une image du même
+ * mouvement : à l'œil, rien ne les distingue. La séparation est donc portée
+ * par trois signaux redondants — un titre explicite, un liseré de couleur
+ * différente, et un fond plus profond que le panneau. Un seul de ces signaux
+ * ne suffirait pas à empêcher de ranger une infographie dans l'historique.
+ */
+.mediaBlock {
+  padding: 12px;
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  border-left: 4px solid var(--line);
+}
+
+.mediaBlock + .mediaBlock {
+  margin-top: 16px;
+}
+
+/* Vert « test » : une référence, elle ne bouge pas. */
+.mediaBlockReference {
+  border-left-color: var(--bloc-test);
+}
+
+/* Jaune d'action : ce qui se met à jour séance après séance. */
+.mediaBlockProgress {
+  border-left-color: var(--accent);
+}
+
+.mediaBlockTitle {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+/* --- Remarque par exercice ------------------------------------------------ */
+
+/*
+ * Sous les séries, avant les consignes. Discret par défaut : un liseré, pas une
+ * carte — c'est un champ facultatif, il ne doit pas peser autant qu'une série.
+ */
+.exNote {
+  margin: 10px var(--pad) 0;
+  padding: 10px 12px;
+  border-left: 2px solid var(--line);
+  background: var(--surface-2);
+  border-radius: var(--radius-sm);
+}
+
+.exNoteHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.exNoteLabel {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--ink-2);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+/* Dit en toutes lettres que rien n'est attendu ici. */
+.exNoteOptional {
+  font-weight: 400;
+  color: var(--ink-3);
+}
+
+.exNoteBadge {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 5px;
+  min-height: var(--tap);
+  padding: 2px 6px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--accent-ink);
+  cursor: pointer;
+}
+
+.exNotePast {
+  margin: 0 0 8px;
+  padding: 0 0 0 14px;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: var(--ink-2);
+}
+
+.exNotePast li + li {
+  margin-top: 4px;
+}
+
+.exNotePastWhen {
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+}
+
+.exNoteField {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--grad-surface, var(--surface));
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.9rem;
+  resize: vertical;
+}
+
+.exNoteField::placeholder {
+  color: var(--ink-3);
+}
+
+/*
+ * Le bouton qui fait passer le brouillon dans l'historique. Pleine largeur et
+ * 48 px : c'est un geste qu'on fait avec le pouce, souvent debout, parfois les
+ * mains moites.
+ */
+.exNoteAdd {
+  display: block;
+  width: 100%;
+  min-height: 48px;
+  margin-top: 8px;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--accent-ink);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+/* Le ✕ de retrait : discret, mais pas minuscule — 32 px de cible utile. */
+.exNoteDel {
+  min-width: 32px;
+  min-height: 32px;
+  margin-left: 4px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--ink-3);
+  font-size: 0.8rem;
+  line-height: 1;
+  vertical-align: middle;
+}
+
+.exNoteConfirm {
+  display: inline-flex;
+  gap: 6px;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+
+.exNoteDelYes,
+.exNoteDelNo {
+  min-height: 32px;
+  padding: 0 10px;
+  border-radius: var(--radius-sm);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.exNoteDelYes {
+  border: 0;
+  background: var(--rouge);
+  color: #fff;
+}
+
+.exNoteDelNo {
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink-2);
+}
+
+/* --- Mètres ou pas sur place ---------------------------------------------- */
+
+/*
+ * Deux boutons, pas un menu déroulant : le choix se fait au pouce, debout,
+ * barre dans les coudes. 48 px de haut, et l'unité active lisible d'un coup
+ * d'œil pour qu'on ne valide pas trois séries dans la mauvaise.
+ */
+.uniteRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 10px var(--pad) 0;
+}
+
+.uniteLabel {
+  color: var(--ink-3);
+  font-size: 0.8rem;
+}
+
+.uniteChoice {
+  display: flex;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.uniteButton {
+  min-width: 64px;
+  min-height: 48px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--ink-2);
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.uniteOn {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--ink-on-accent);
+}
+
+/* --- « La dernière fois » -------------------------------------------------- */
+
+/*
+ * Une ligne, pas une carte : l'encart s'intercale entre la charge prévue et les
+ * champs de saisie, il ne doit pas peser autant que l'une ou les autres.
+ */
+.lastTime {
+  margin: 8px var(--pad) 0;
+  padding: 7px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  font-size: 0.8rem;
+}
+
+/*
+ * La première ligne garde la forme d'avant — semaine, valeur, RPE, écart. Les
+ * deux lignes de format viennent dessous : elles se lisent, elles ne se
+ * survolent pas, et les coller sur la même ligne les faisait passer à la ligne
+ * n'importe où sur un écran de 390 px.
+ */
+.lastTimeRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 44px;
+  text-align: left;
+}
+
+.lastTimeFormat,
+.lastTimePlan {
+  margin-top: 5px;
+  color: var(--ink-3);
+  line-height: 1.4;
+}
+
+.lastTimeFormat b {
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.lastTimePlan b {
+  color: var(--accent-ink);
+  font-weight: 700;
+}
+
+.lastTimeWhen {
+  color: var(--ink-3);
+}
+
+.lastTimeValue {
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.lastTimeRpe {
+  color: var(--ink-2);
+}
+
+/* Neutre par défaut — une baisse de deload n'est pas un échec. */
+.lastTimeDelta {
+  margin-left: auto;
+  color: var(--ink-3);
+}
+
+.lastTimeUp {
+  color: var(--vert);
+  font-weight: 600;
+}
+
+/* --- Combien d'haltères ---------------------------------------------------- */
+
+/*
+ * Assez visible pour être lu sans le chercher, assez sobre pour ne pas
+ * concurrencer la ligne de charge. Il se lit avant d'aller au rack.
+ */
+.gripHint {
+  margin: 6px var(--pad) 0;
+  padding: 5px 9px;
+  border-left: 3px solid var(--accent);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  background: var(--surface-2);
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+
+/* ------------------------------------- à quoi sert ce mouvement de tronc -- */
+
+/* Un vrai bandeau, pas une note : le nom de la fonction en capitales, puis
+   une phrase. Pleine largeur de la carte, sous la ligne de charge. */
+.fonctionTronc {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin: 10px var(--pad) 0;
+  padding: 9px 12px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line-strong);
+  border-left: 4px solid var(--accent);
+  background: var(--surface-2);
+}
+
+.fonctionNom {
+  font-family: var(--font-cond);
+  font-size: 0.9375rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent-ink);
+}
+
+.fonctionTexte {
+  font-size: 0.875rem;
+  line-height: 1.4;
+  color: var(--ink);
+}
+
+/* ------------------------------------------------- exercice suspendu -- */
+
+/*
+ * Un exercice retiré de la prescription reste à l'écran, sans séries ni
+ * champs : rien à cocher, rien à valider. Le liseré gauche et le gris
+ * disent « ce n'est pas pour aujourd'hui » sans avoir à le lire.
+ */
+.suspendu {
+  margin: var(--gap) var(--pad);
+  padding: 12px 14px;
+  border-left: 3px solid var(--ink-3);
+  border-radius: var(--radius-sm);
+  background: var(--grad-surface, var(--surface));
+}
+
+.suspenduTitre {
+  color: var(--ink-2);
+  font-size: var(--fs-small);
+  font-weight: 700;
+}
+
+.suspenduRaison {
+  margin: 4px 0 0;
+  color: var(--ink-3);
+  font-size: var(--fs-small);
+  line-height: 1.4;
+}
+
+/*
+ * Les séries déjà faites, en lecture seule. Elles restent lisibles — un
+ * entraînement réalisé ne disparaît pas parce que l'exercice sort du
+ * programme — mais rien n'y est cliquable : ce n'est plus une prescription.
+ */
+.suspenduFait {
+  margin: 10px 0 0;
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+  color: var(--ink-2);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.suspenduSeries {
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.suspenduSerie {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 5px 0;
+  color: var(--ink-2);
+  font-size: var(--fs-small);
+}
+
+.suspenduIndex {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--surface-2);
+  color: var(--ink-3);
+  font-size: 0.6875rem;
+  font-weight: 700;
+}
+
+.suspenduRate {
+  color: var(--rouge);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+/* ============ Remplacer / ajouter un exercice ============================= */
+
+/*
+ * Le bandeau « à la place de … ». Pas décoratif : sans lui, relire la séance
+ * trois semaines plus tard donnerait l'impression que le programme prescrivait
+ * un Hack Squat.
+ */
+.customBanner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 var(--pad) 8px;
+  padding: 8px 10px;
+  border-left: 3px solid var(--accent);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  background: var(--surface-2);
+}
+
+.customBannerText {
+  flex: 1;
+  color: var(--ink-2);
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+.customCancel {
+  flex: none;
+  min-height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--ink-2);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+/* Ce qui avait été fait à la place la dernière fois. Affiché, jamais appliqué. */
+.prevCustom {
+  margin: 0 var(--pad) 8px;
+  padding: 7px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  color: var(--ink-2);
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+.prevCustomWhen {
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+}
+
+.replaceButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: calc(100% - 2 * var(--pad));
+  min-height: 48px;
+  margin: 8px var(--pad) 0;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--ink-2);
+  font-size: var(--fs-small);
+  font-weight: 700;
+}
+
+/* --- La zone d'ajout, tout en bas de la liste ----------------------------- */
+
+.addZone {
+  margin: 16px var(--pad) 8px;
+}
+
+.addButton {
+  display: block;
+  width: 100%;
+  min-height: 56px;
+  border: 1px dashed var(--accent);
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--accent-ink);
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.addPrev {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+/*
+ * La ligne « ajouté la semaine dernière » : le texte peut faire deux lignes,
+ * le bouton garde ses 48 px. Grille plutôt que flex, pour que « Reprendre » ne
+ * se fasse jamais écraser par un nom long.
+ */
+.addPrevRow {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+}
+
+.addPrevText {
+  color: var(--ink-2);
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+.addPrevButton {
+  min-height: 48px;
+  padding: 0 14px;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--accent-ink);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+/* --- Le panneau de saisie ------------------------------------------------- */
+
+.panel {
+  margin: 8px var(--pad) 16px;
+  padding: 12px;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius);
+  background: var(--grad-surface, var(--surface));
+}
+
+.panelHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.panelTitle {
+  color: var(--ink);
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.panelSub {
+  margin-top: 3px;
+  color: var(--ink-3);
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
+.panelClose {
+  flex: none;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--ink-2);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.panelSearch {
+  display: block;
+  width: 100%;
+  min-height: 48px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  color: var(--ink);
+  font: inherit;
+  font-size: 1rem;
+}
+
+.panelSearch::placeholder {
+  color: var(--ink-3);
+}
+
+.panelList {
+  max-height: 320px;
+  margin: 10px 0 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.panelChoice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  min-height: 52px;
+  padding: 0 10px;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  background: transparent;
+  text-align: left;
+}
+
+.panelChoiceFree {
+  border-bottom-color: var(--accent);
+}
+
+.panelChoiceName {
+  color: var(--ink);
+  font-size: 0.95rem;
+}
+
+.panelChoiceTag {
+  flex: none;
+  color: var(--ink-3);
+  font-size: 0.72rem;
+}
+
+.panelEmpty {
+  padding: 12px 10px;
+  color: var(--ink-3);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+/* L'exercice retenu, en haut : on peut toujours en changer d'un appui. */
+.panelPicked {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  min-height: 52px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  text-align: left;
+}
+
+.panelPickedName {
+  color: var(--ink);
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.panelPickedChange {
+  flex: none;
+  color: var(--accent-ink);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.panelSteppers {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.panelRecap {
+  margin-top: 12px;
+  color: var(--ink-2);
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.panelRecap b {
+  color: var(--ink);
+}
+
+.panelSave {
+  display: block;
+  width: 100%;
+  min-height: 56px;
+  margin-top: 12px;
+  border: 0;
+  border-radius: var(--radius);
+  background: var(--accent);
+  color: var(--ink-on-accent);
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+/* ============ Alternance / superset ====================================== */
+
+/*
+ * Un encadré pour deux mouvements. Bordure marquée à gauche : à mi-défilement,
+ * c'est elle qui dit qu'on est encore dans le même bloc — sans elle, le second
+ * mouvement passe pour un exercice de plus.
+ */
+/*
+ * Le bloc d'alternance.
+ *
+ * Son filet de gauche était rouge d'ACTION, collé au bord de l'écran, et
+ * courait sur 2 700 px — plus haut que trois écrans. À côté des boutons
+ * « Valider la série », qui sont le rouge auquel on obéit, cette barre tirait
+ * l'œil sans rien demander. Elle passe à l'argent des contours : les lettres
+ * de station (A, B) disent déjà que ces mouvements vont ensemble, et le
+ * titre du bloc le dit en toutes lettres.
+ *
+ * Le vert de la version terminée reste : lui marque un fait acquis, pas une
+ * action à faire.
+ */
+/*
+ * L'ENCADRÉ NÉON — et il vaut pour tous les programmes.
+ *
+ * Le filet de gauche ne suffisait pas : à mi-défilement, deux mouvements
+ * menés ensemble se lisaient encore comme deux exercices de suite. Le bloc
+ * est maintenant cerné sur ses quatre côtés, avec un halo qui le détache du
+ * fond — le même geste visuel que le modèle.
+ *
+ * Tout part de `--accent`, le rouge d'action de chaque thème, et rien n'est
+ * écrit en dur : un programme ajouté demain hérite de son encadré sans une
+ * ligne de CSS de plus, dans sa propre teinte.
+ */
+.superset {
+  margin: var(--gap) var(--pad);
+  background: var(--grad-surface, var(--surface));
+  border: 2px solid var(--accent);
+  border-radius: var(--radius);
+  box-shadow:
+    0 0 0 4px color-mix(in srgb, var(--accent) 12%, transparent),
+    0 6px 18px color-mix(in srgb, var(--accent) 16%, transparent);
+  overflow: hidden;
+}
+
+/* Fini, le bloc passe au vert : un fait acquis, plus une action à faire. */
+.supersetDone {
+  border-color: var(--vert);
+  box-shadow:
+    0 0 0 4px color-mix(in srgb, var(--vert) 12%, transparent),
+    0 6px 18px color-mix(in srgb, var(--vert) 16%, transparent);
+}
+
+/*
+ * L'en-tête est lavé d'accent. Sur le fond clair de MASS c'est le rose pâle
+ * du modèle ; sur les thèmes sombres, le même mélange donne un fond teinté
+ * au lieu d'un blanc qui éblouirait en salle.
+ */
+.supersetHead {
+  padding: 14px var(--pad) 10px;
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface));
+}
+
+.supersetDone .supersetHead {
+  background: color-mix(in srgb, var(--vert) 8%, var(--surface));
+}
+
+.supersetBadge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--ink-on-accent);
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  box-shadow: 0 0 12px color-mix(in srgb, var(--accent) 55%, transparent);
+}
+
+.supersetDone .supersetBadge {
+  background: var(--vert);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--vert) 55%, transparent);
+}
+
+.supersetTitle {
+  margin: 8px 0 0;
+  color: var(--ink);
+  font-size: 1.15rem;
+  font-weight: 800;
+  line-height: 1.25;
+}
+
+.supersetPlus {
+  color: var(--accent-ink);
+}
+
+.supersetFormat {
+  margin-top: 4px;
+  color: var(--ink-2);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.supersetConsigne {
+  margin: 8px 0 0;
+  color: var(--ink-2);
+  font-size: 0.85rem;
+  line-height: 1.45;
+}
+
+.supersetCount {
+  margin-top: 8px;
+  color: var(--ink-3);
+  font-size: 0.8rem;
+}
+
+/* --- Le bloc minuté ------------------------------------------------------- */
+
+/*
+ * Un compte à rebours, pas un repos.
+ *
+ * Il vit dans l'en-tête du circuit et non dans la barre du bas : la barre du
+ * bas porte le repos entre deux séries, et les deux tournent EN MÊME TEMPS
+ * sur un circuit minuté — 20 s de récupération à l'intérieur des 10 minutes.
+ * Les mettre au même endroit aurait obligé l'un des deux à disparaître.
+ */
+.blocMinute {
+  margin-top: 12px;
+}
+
+.blocJauge {
+  height: 4px;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  overflow: hidden;
+}
+
+.blocJauge i {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.5s linear;
+}
+
+.blocJaugeFinie i {
+  background: var(--vert);
+}
+
+.blocLigne {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.blocTemps {
+  color: var(--ink);
+  font-family: var(--font-cond);
+  font-size: 1.35rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.blocTempsFini {
+  color: var(--vert);
+}
+
+.blocLabel {
+  flex: 1 1 auto;
+  min-width: 0;
+  color: var(--ink-2);
+  font-size: 0.78rem;
+}
+
+.blocBouton {
+  flex: 0 0 auto;
+  min-height: var(--tap);
+  padding: 0 14px;
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  color: var(--accent-ink-fort);
+  font: inherit;
+  font-size: var(--fs-small);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.blocBouton:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* --- Un tour -------------------------------------------------------------- */
+
+.tour {
+  border-top: 1px solid var(--line);
+  padding: 10px 0;
+}
+
+/*
+ * Tous les tours restent saisissables, et aucun n'est grisé.
+ *
+ * Les replier ou les estomper aurait coûté un appui de plus par tour, au
+ * milieu d'une série de 45 s — exactement le genre de geste qu'on ne fait pas
+ * les mains pleines. Le tour EN COURS est simplement marqué, pour qu'on
+ * retrouve sa place d'un coup d'œil après avoir reposé le téléphone.
+ */
+.tourOuvert .tourTitre {
+  color: var(--accent-ink);
+}
+
+.tourOuvert .setIndex {
+  color: var(--accent-ink);
+}
+
+.tourHead {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 var(--pad) 6px;
+}
+
+.tourTitre {
+  color: var(--ink-2);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.tourFlag {
+  margin-left: auto;
+  color: var(--vert);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.station {
+  padding: 2px 0;
+}
+
+.stationNom {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 4px var(--pad) 2px;
+  color: var(--ink);
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.stationLettre {
+  flex: none;
+  min-width: 20px;
+  color: var(--accent-ink);
+  font-weight: 800;
+}
+
+.stationVide {
+  padding: 8px var(--pad);
+  color: var(--ink-3);
+  font-size: 0.8rem;
+}
+
+/*
+ * Ce qui sépare les deux stations. C'est une CONSIGNE — « enchaîne sans
+ * repos » ou « 45 s » — pas un ornement : elle dit ce qu'on fait entre les
+ * deux, et c'est précisément ce qui se perdait avec deux cartes séparées.
+ */
+/* Ce qui sépare les deux stations, à l'accent du thème, comme le modèle. */
+.tourChain {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 6px var(--pad);
+  color: var(--accent-ink-fort);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+}
+
+.tourChain span {
+  flex: 1;
+  height: 1px;
+  background: color-mix(in srgb, var(--accent-ink-fort) 35%, var(--line));
+}
+
+/* Les deux fiches d'exercice, sous les tours. */
+.supersetFiches {
+  border-top: 1px solid var(--line);
+  padding-top: 10px;
+}
+
+/* Dit où sont passées les séries d'une carte qui n'en montre plus. */
+.setsAilleurs {
+  margin: 8px var(--pad) 0;
+  padding: 7px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  color: var(--ink-3);
+  font-size: 0.78rem;
+}
+
+/* ------------------------------------------------- démarrer la séance ---- */
+
+/*
+ * Le bouton qui lance le chrono.
+ *
+ * Il n'existe que tant que la séance n'a pas commencé, et il occupe la place
+ * que prendra l'échauffement : c'est la première action de la séance, elle
+ * doit être la première chose sous l'en-tête. Pleine largeur et 60 px de
+ * haut — on l'actionne avec le pouce, debout, souvent les mains occupées.
+ */
+.demarrer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: calc(100% - 2 * var(--pad));
+  margin: var(--gap) var(--pad) 0;
+  height: 60px;
+  border-radius: var(--radius);
+  /* FEMMES donne un dégradé vertical ; les autres thèmes gardent l'aplat. */
+  background: var(--grad-accent, var(--accent));
+  color: var(--ink-on-accent);
+  font-family: var(--font-cond);
+  font-size: 1.25rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+/* ------------------------------------- deuxième partie d'une série ------ */
+
+/*
+ * MASS 4 construit plusieurs séries en deux temps : une dégressive, ou un
+ * passage à l'échec après cinq secondes de pause. Le second effort compte
+ * autant que le premier, et se saisit donc à part.
+ *
+ * Encadré et décalé : sans la séparation, les deux jeux de champs se lisent
+ * comme une seule série à quatre valeurs, et on ne sait plus lequel est
+ * lequel une fois la barre en main.
+ */
+.seconde {
+  margin-top: 10px;
+  padding: 10px 12px 12px;
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+}
+
+.secondeTitre {
+  margin: 0 0 8px;
+  color: var(--ink-2);
+  font-size: var(--fs-small);
+  font-weight: 700;
+}
+
+/*
+ * « Charge : la même » — dit explicitement qu'il n'y a rien à alléger.
+ *
+ * Sur sa propre ligne sous le titre : à côté du champ de reps, il se lisait
+ * comme un second champ qu'on aurait oublié de remplir.
+ */
+.secondeMemeCharge {
+  display: block;
+  margin-top: 2px;
+  color: var(--ink-3);
+  font-size: var(--fs-small);
+  font-weight: 400;
+}
+
+/* ------------------------------------ alternance une jambe / deux ------- */
+
+/*
+ * Deux couleurs, et elles ne servent qu'ici.
+ *
+ * Le jaune pour « une jambe », le marine pour « les deux ». Ce sont celles de
+ * l'application de référence, et le jaune n'est utilisé nulle part ailleurs
+ * dans l'écran de séance : impossible de le confondre avec le rouge d'une
+ * action ou avec l'encadré d'un superset.
+ *
+ * Écrites en dur plutôt qu'en jetons de thème parce qu'elles doivent rester
+ * les mêmes dans les deux univers : un bandeau qui change de sens d'un thème
+ * à l'autre ne serait plus un repère.
+ */
+.alternance {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+}
+
+.alternanceUni {
+  border: 2px solid #f2b33d;
+  background: rgb(242 179 61 / 12%);
+}
+
+.alternanceBi {
+  border: 2px solid #4b6584;
+  background: rgb(75 101 132 / 16%);
+}
+
+.alternanceTitre {
+  margin: 0;
+  color: var(--ink);
+  font-size: var(--fs-small);
+  font-weight: 700;
+}
+
+/* La frise : quatre pastilles, une par semaine du cycle. */
+.frise {
+  display: flex;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.frise li {
+  min-width: 30px;
+  padding: 2px 0;
+  border-radius: 999px;
+  font-family: var(--font-cond);
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.friseUni {
+  background: #f2b33d;
+  color: #1a1a18;
+}
+
+.friseBi {
+  background: rgb(75 101 132 / 55%);
+  color: var(--ink);
+}
+
+/* Accompagnement discret, adapté au tactile. */
+.guidance {
+  margin: 16px var(--pad);
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--bg-2);
+}
+.guidance strong {
+  display: block;
+  margin-bottom: 8px;
+}
+.guidance p {
+  margin: 0 0 12px;
+  line-height: 1.5;
+}
+.guidanceActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.guidanceActions button {
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-weight: 700;
+}
+
+/* ------------------------------------------------- avancement de séance -- */
+
+/*
+ * Collé sous la barre d'état pendant le défilement. Fond plein : le texte
+ * qui passe dessous ne doit jamais se lire à travers.
+ *
+ * Trois états, et pas seulement par la couleur : « fait » est plein et vert,
+ * « en cours » plein dans le rouge d'action, « à venir » un simple fond de
+ * piste. Le compte écrit au-dessus dit la même chose en chiffres.
+ */
+.avancement {
+  position: sticky;
+  top: env(safe-area-inset-top, 0px);
+  z-index: 20;
+  padding: 8px var(--pad) 10px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--line);
+}
+
+.avancementLigne {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.avancementTexte {
+  color: var(--ink-2);
+  font-size: var(--fs-small);
+}
+
+/* Le niveau dit aussi par le MOT : la couleur ne porte jamais seule le statut. */
+.readiness_vert {
+  color: var(--vert);
+}
+
+.readiness_orange {
+  color: var(--orange);
+}
+
+.readiness_rouge {
+  color: var(--rouge);
+}
+
+.avancementTexte b {
+  color: var(--ink);
+}
+
+.avancementBarre {
+  display: grid;
+  grid-template-columns: repeat(var(--n), minmax(0, 1fr));
+  gap: 3px;
+  margin-top: 6px;
+}
+
+.avancementPas {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--surface-3);
+}
+
+.avancementFait {
+  background: var(--vert);
+}
+
+.avancementEnCours {
+  background: var(--accent);
+}
+
+/* ---------------------------------------------------- carte compacte -- */
+
+/*
+ * La série à faire, mise en avant par un fond légèrement teinté — pas par une
+ * couleur nouvelle : le rouge d'action à 6 %, celui du bouton « Valider ».
+ */
+.setCourante {
+  background: color-mix(in srgb, var(--accent) 7%, transparent);
+}
+
+.setCourante .setIndex {
+  color: var(--accent-ink-fort);
+}
+
+/* Une série pas encore faite : une ligne, touchable pour l'ouvrir d'avance. */
+.setAVenir {
+  width: 100%;
+  min-height: var(--tap);
+  align-items: center;
+  text-align: left;
+  color: var(--ink-3);
+}
+
+.setAVenirTexte {
+  font-size: var(--fs-small);
+}
+
+/* Charge, reps, RPE sur une seule ligne (colonnes posées par le composant). */
+.steppersLigne {
+  display: grid;
+  gap: 6px;
+}
+
+/*
+ * Dans la série en cours, l'index prend moins de place : les trois sélecteurs
+ * ont besoin de chaque pixel à 390 px de large.
+ */
+.setCourante,
+.setAVenir {
+  grid-template-columns: 22px minmax(0, 1fr);
+  gap: 8px;
+  padding-left: 12px;
+  padding-right: 12px;
+}
+
+/*
+ * Le bloc « Fiche technique » : image en fond, bouton rouge au centre.
+ * Hauteur fixe pour que la carte ne saute pas quand l'image arrive.
+ */
+.fiche {
+  position: relative;
+  overflow: hidden;
+  height: 132px;
+  margin: 10px var(--pad) 0;
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  display: grid;
+  place-items: center;
+}
+
+.ficheImage,
+.ficheAmbiance {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Une fiche déposée est un document : on la montre entière, pas recadrée. */
+.ficheImage {
+  object-fit: contain;
+  background: var(--surface-3);
+}
+
+.ficheVoile {
+  position: absolute;
+  inset: 0;
+  background: rgb(var(--voile) / 45%);
+  pointer-events: none;
+}
+
+.ficheBouton {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: var(--tap);
+  padding: 0 20px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--ink-on-accent);
+  font-family: var(--font-cond);
+  font-size: 1.0625rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  box-shadow: var(--shadow-action);
+}
+
+.ficheBouton:active {
+  background: var(--accent-deep);
+}
+
+/* Consignes · Remarque · Documenter, côte à côte. */
+.tiroirs {
+  display: grid;
+  grid-auto-columns: minmax(0, 1fr);
+  grid-auto-flow: column;
+  gap: 8px;
+  margin: 12px var(--pad) 12px;
+}
+
+.tiroir {
+  min-height: var(--tap);
+  padding: 0 6px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  background: var(--grad-surface, var(--surface));
+  color: var(--ink);
+  font-size: var(--fs-small);
+  font-weight: 700;
+}
+
+.tiroirOuvert {
+  background: var(--surface-3);
+}
+
+/* « Ensuite » : le mouvement suivant, en pied de carte. */
+.ensuite {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: var(--tap);
+  padding: 10px var(--pad);
+  border-top: 1px solid var(--line);
+  color: var(--ink-3);
+  text-align: left;
+}
+
+.ensuiteLabel {
+  flex: none;
+  font-family: var(--font-cond);
+  font-size: var(--fs-small);
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.ensuiteNom {
+  flex: 1;
+  min-width: 0;
+  color: var(--ink);
+  font-weight: 600;
+}
+
+/* « Dernière fois » tient sur une ligne ; le détail s'ouvre au toucher. */
+.lastTimeDroite {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-left: auto;
+}
+
+/* La vigilance d'un exercice (MASS FORCE) : en tête de carte, liseré
+   d'alerte, pour être lue avant de charger. */
+.vigilance {
+  margin: 10px 0 0;
+  padding: 9px 12px;
+  border-left: 3px solid var(--warn, #e0a030);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--warn, #e0a030) 10%, transparent);
+  color: var(--ink-2);
+  font-size: var(--fs-small);
+  line-height: 1.45;
+}
+
+.vigilance b {
+  color: var(--ink);
+}
+
+/* La fourchette de charge (MASS FORCE) : lisible d'un coup d'œil, la
+   provenance en retrait. */
+.chargeCible {
+  margin: 8px 0 0;
+  color: var(--ink-2);
+  font-size: var(--fs-small);
+  line-height: 1.45;
+}
+
+.chargeCible p {
+  margin: 0;
+}
+
+.chargeCible b {
+  color: var(--ink);
+  font-size: 1.0625rem;
+}
+
+.chargePct {
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.chargeSource {
+  margin-top: 2px;
+  color: var(--ink-3);
+  font-size: 0.8125rem;
+}
+
+/* MASS FORCE, lot 6 : pourquoi cette cible, et le conseil des complémentaires. */
+.chargeMotif {
+  margin-top: 2px;
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.conseilProgression {
+  margin: 8px 0 0;
+  color: var(--ink-2);
+  font-size: var(--fs-small);
+  line-height: 1.45;
+}
+
+/* Le RIR de la dernière série : facultatif, vide par défaut. */
+.rir {
+  margin: 10px 0 0;
+}
+
+/* Sous une case « Charge » vide, la première fois : quoi faire, et ensuite. */
+.aideCharge {
+  margin: 0;
+  color: var(--ink-2);
+  font-size: var(--fs-small);
+  line-height: 1.4;
+}
+
+.rirLegende {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--ink-3);
+  font-size: var(--fs-small);
+}
+
+.rirChoix {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+
+.rirBouton {
+  min-height: 44px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.rirChoisi {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 22%, var(--surface));
+}
+
+/* Une série qui n'a pas pu être écrite (P1-B) : lisible, sous le bouton. */
+.erreurSerie {
+  margin: 8px 0 0;
+  padding: 9px 12px;
+  border-left: 3px solid var(--rouge, #e5484d);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--rouge, #e5484d) 10%, transparent);
+  color: var(--ink);
+  font-size: var(--fs-small);
+  font-weight: 600;
+  line-height: 1.45;
+}
+
+/* MASS : même « // » rouge que les en-têtes (ScreenHeader.module.css). */
+:global([data-theme='mass']) .title::after {
+  content: '\00a0//' / '';
+  color: var(--accent-bright);
+}
+
+/*
+ * MASS : la photo d'en-tête des maquettes de Guillaume (14 novembre), sur la
+ * séance et le combiné. Sujet à droite, titre à gauche : le masque l'éteint
+ * vers la gauche (là où passe le titre) et vers le bas (là où passent les
+ * pastilles), sans arête. Elle vit SOUS le texte (`z-index: -1`, l'en-tête
+ * étant son propre contexte d'empilement).
+ */
+.header:has(.enteteFond) {
+  isolation: isolate;
+}
+
+.enteteFond {
+  inset: 0 0 auto auto;
+  width: 100%;
+  height: 176px;
+  z-index: -1;
+  opacity: 1;
+  -webkit-mask-image:
+    linear-gradient(90deg, transparent 0%, rgb(0 0 0 / 28%) 40%, rgb(0 0 0 / 62%) 100%),
+    linear-gradient(180deg, #000 0%, #000 55%, transparent 100%);
+  -webkit-mask-composite: source-in;
+  mask-image:
+    linear-gradient(90deg, transparent 0%, rgb(0 0 0 / 28%) 40%, rgb(0 0 0 / 62%) 100%),
+    linear-gradient(180deg, #000 0%, #000 55%, transparent 100%);
+  mask-composite: intersect;
+}
+
+/* ===================================================================== */
+/*
+ * SÉANCE MASS — d'après la référence de Guillaume (14 novembre), mesurée sur
+ * sa capture d'iPhone (849 px = 402 px CSS). Tout est sous le thème MASS ET
+ * sous `.ecranSeance` : POWER, FEMMES et le combiné MASS, qui partagent ces
+ * classes, ne voient rien.
+ *
+ * Écarts voulus, la référence contredisant une règle de l'app :
+ * - les curseurs et le bouton de la fiche gardent 48 px (`--tap`) ;
+ * - le retour « Semaine 1 » garde sa zone de 48 px ; elle mord de 12 px sur
+ *   la barre d'état pour que le texte tombe où la référence le pose.
+ */
+
+/* La photo passe sous la barre d'état, comme sur la référence. */
+:global([data-theme='mass']) .ecranSeance .enteteSeance {
+  --haut-ecran: env(safe-area-inset-top, 0px);
+  isolation: isolate;
+  margin-top: calc(-1 * var(--haut-ecran));
+  /* Le contenu commence SOUS la barre d'état : collé à l'heure, le retour
+     « Semaine 1 » tombait dans la zone qu'iOS assombrit (vidéo de Guillaume,
+     15 novembre). La photo, elle, reste sous l'heure. */
+  padding: calc(var(--haut-ecran) + 10px) 19px 8px;
+  border-bottom: 0;
+  background: var(--bg);
+}
+
+:global([data-theme='mass']) .ecranSeance .enteteSeance .enteteFond {
+  height: calc(250px + var(--haut-ecran) * 0.5);
+  -webkit-mask-image:
+    linear-gradient(90deg, rgb(0 0 0 / 55%) 0%, rgb(0 0 0 / 75%) 45%, #000 80%),
+    linear-gradient(180deg, #000 0%, #000 55%, transparent 100%);
+  mask-image:
+    linear-gradient(90deg, rgb(0 0 0 / 55%) 0%, rgb(0 0 0 / 75%) 45%, #000 80%),
+    linear-gradient(180deg, #000 0%, #000 55%, transparent 100%);
+}
+
+:global([data-theme='mass']) .ecranSeance .enteteSeance .back {
+  margin-left: -6px;
+  color: #f2f2f2;
+  font-family: 'Barlow Mass', var(--font-cond);
+  font-size: 1.125rem;
+  font-style: italic;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+}
+
+/* Titre argent, vrai italique extra-gras ; le « // » rouge reste. */
+:global([data-theme='mass']) .ecranSeance .enteteSeance .title {
+  width: fit-content;
+  margin-top: 0;
+  font-family: 'Barlow Mass', var(--font-cond);
+  font-size: 3.1rem;
+  font-style: italic;
+  font-weight: 800;
+  line-height: 0.95;
+  transform: none;
+  background: var(--mass-argent) 0 0 / 100% 0.95em repeat-y;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: var(--mass-ombre-titre);
+}
+
+/* La référence n'a pas de trait sous le titre de séance. */
+:global([data-theme='mass']) .ecranSeance .enteteSeance .titleRule {
+  display: none;
+}
+
+/* Les pastilles : plus grandes, bord gris, texte blanc gras. */
+:global([data-theme='mass']) .ecranSeance .enteteSeance .meta {
+  gap: 8px 6px;
+  margin-top: 14px;
+}
+
+:global([data-theme='mass']) .ecranSeance .enteteSeance .metaItem {
+  gap: 6px;
+  min-height: 30px;
+  padding: 0 11px;
+  border: 1.5px solid #5c5d5e;
+  background: rgb(0 0 0 / 40%);
+  color: #fff;
+  font-size: 0.90625rem;
+  font-weight: 700;
+}
+
+:global([data-theme='mass']) .ecranSeance .enteteSeance .metaItem b {
+  font-weight: 700;
+}
+
+/* « DUR » : bord rouge, fond rouge sombre, sans la pastille de couleur. */
+:global([data-theme='mass']) .ecranSeance .enteteSeance .tag {
+  border-color: var(--mass-rouge);
+  background: linear-gradient(180deg, rgb(160 12 20 / 45%) 0%, rgb(90 6 10 / 45%) 100%);
+}
+
+:global([data-theme='mass']) .ecranSeance .enteteSeance .tag::before {
+  content: none;
+}
+
+/* Le calendrier devant la date. Décoratif. */
+:global([data-theme='mass']) .ecranSeance .metaDate::before {
+  content: '';
+  flex: none;
+  width: 16px;
+  height: 16px;
+  background: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 6h16v15H4zM4 10h16M9 3v4M15 3v4M9 15h2M13 15h2M9 18h2'/%3E%3C/svg%3E")
+    center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 6h16v15H4zM4 10h16M9 3v4M15 3v4M9 15h2M13 15h2M9 18h2'/%3E%3C/svg%3E")
+    center / contain no-repeat;
+}
+
+/* L'avancement : texte blanc, filet, cinq segments gris arrondis. */
+:global([data-theme='mass']) .ecranSeance .avancement {
+  padding: 10px 19px 12px;
+  border-bottom: 0;
+}
+
+:global([data-theme='mass']) .ecranSeance .avancementTexte {
+  color: #f0f0f0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+:global([data-theme='mass']) .ecranSeance .avancementBarre {
+  gap: 4px;
+  margin-top: 6px;
+  padding-top: 4px;
+  border-top: 1px solid #47484a;
+}
+
+:global([data-theme='mass']) .ecranSeance .avancementPas {
+  height: 8px;
+  border-radius: 4px;
+  background: #2a2a2b;
+}
+
+/* Démarrer : dégradé rouge profond, halo, italique extra-gras. */
+:global([data-theme='mass']) .ecranSeance .demarrer {
+  width: calc(100% - 28px);
+  height: 50px;
+  margin: 6px 14px 0;
+  border: 1px solid var(--mass-rouge-bord);
+  border-radius: 14px;
+  background: var(--mass-degrade-action);
+  font-family: 'Barlow Mass', var(--font-cond);
+  font-size: 1.5rem;
+  font-style: italic;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  box-shadow:
+    var(--mass-liseret-action),
+    0 0 18px rgb(226 10 17 / 50%);
+}
+
+/* La carte d'exercice. */
+:global([data-theme='mass']) .ecranSeance .exercise {
+  margin: 17px 13px;
+  border: 1px solid var(--mass-carte-bord);
+  border-radius: 14px;
+  background: linear-gradient(180deg, #1b1b1c 0%, #101011 100%);
+  box-shadow: var(--mass-liseret);
+}
+
+:global([data-theme='mass']) .ecranSeance .exHead {
+  padding: 10px 19px 8px;
+}
+
+:global([data-theme='mass']) .ecranSeance .exRepere {
+  color: #b9b9b9;
+  font-family: 'Barlow Mass', var(--font-cond);
+  font-size: 0.9375rem;
+  font-style: italic;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+
+:global([data-theme='mass']) .ecranSeance .exName {
+  color: #fff;
+  font-family: 'Barlow Mass', var(--font-cond);
+  font-size: 1.5rem;
+  font-style: italic;
+  font-weight: 800;
+  letter-spacing: 0.005em;
+  line-height: 1.1;
+}
+
+/* « 4 × 5 » : gras plein, pas condensé. */
+:global([data-theme='mass']) .ecranSeance .loadLine {
+  margin-top: 6px;
+  font-family: var(--font);
+  font-size: 2.6rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+:global([data-theme='mass']) .ecranSeance .chargeCible,
+:global([data-theme='mass']) .ecranSeance .chargeCible b,
+:global([data-theme='mass']) .ecranSeance .chargeSource {
+  color: #e8e8e8;
+  font-size: 0.96875rem;
+  line-height: 1.22;
+}
+
+:global([data-theme='mass']) .ecranSeance .chargeCible b,
+:global([data-theme='mass']) .ecranSeance .chargePct {
+  color: #fff;
+}
+
+:global([data-theme='mass']) .ecranSeance .chargeSource {
+  margin-top: 0;
+}
+
+/* Vigilance : bordée de rouge, fond teinté, ⓘ rouge à gauche. */
+:global([data-theme='mass']) .ecranSeance .vigilance {
+  position: relative;
+  margin: 12px -5px 0;
+  padding: 8px 14px 8px 52px;
+  border: 1.5px solid var(--mass-rouge);
+  border-radius: 12px;
+  background: linear-gradient(180deg, rgb(120 10 16 / 30%) 0%, rgb(60 5 8 / 22%) 100%);
+  color: #f0f0f0;
+  font-size: 0.96875rem;
+  line-height: 1.22;
+}
+
+:global([data-theme='mass']) .ecranSeance .vigilance::before {
+  content: 'i' / '';
+  position: absolute;
+  top: 50%;
+  left: 16px;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--mass-rouge);
+  border-radius: 50%;
+  color: var(--mass-rouge);
+  font-family: Georgia, serif;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+  transform: translateY(-50%);
+}
+
+:global([data-theme='mass']) .ecranSeance .vigilance b {
+  color: #fff;
+}
+
+:global([data-theme='mass']) .ecranSeance .exSub {
+  color: #f0f0f0;
+  font-size: 0.96875rem;
+}
+
+/* La fiche : photo plus claire, bouton rouge rectangle arrondi. */
+:global([data-theme='mass']) .ecranSeance .fiche {
+  height: 118px;
+  margin: 8px 6px 0;
+  border-radius: 12px;
+}
+
+:global([data-theme='mass']) .ecranSeance .ficheVoile {
+  background: rgb(var(--voile) / 22%);
+}
+
+:global([data-theme='mass']) .ecranSeance .ficheBouton {
+  padding: 0 22px;
+  border: 1px solid var(--mass-rouge-bord);
+  border-radius: 14px;
+  background: var(--mass-degrade-action);
+  font-family: 'Barlow Mass', var(--font-cond);
+  font-size: 1.3125rem;
+  font-style: italic;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  box-shadow:
+    var(--mass-liseret-action),
+    0 0 14px rgb(226 10 17 / 40%);
+}
+
+/* La série en cours : colonne de gauche teintée de rouge, rang rouge. */
+:global([data-theme='mass']) .ecranSeance .setCourante {
+  background: linear-gradient(
+    90deg,
+    rgb(150 10 16 / 38%) 0,
+    rgb(80 6 10 / 30%) 30px,
+    transparent 30px
+  );
+}
+
+:global([data-theme='mass']) .ecranSeance .setCourante .setIndex {
+  color: var(--mass-rouge);
+  font-family: 'Barlow Mass', var(--font-cond);
+  font-size: 1.875rem;
+  font-style: italic;
+  font-weight: 800;
+}
+
+/* Les curseurs : libellé blanc, cadre bordé, chiffre en italique extra-gras. */
+:global([data-theme='mass']) .ecranSeance .steppersLigne > div > div:first-child {
+  color: #f0f0f0;
+  font-size: 0.8125rem;
+  font-weight: 700;
+}
+
+:global([data-theme='mass']) .ecranSeance .steppersLigne > div > div:last-child {
+  border: 1px solid var(--mass-curseur-bord);
+  background: var(--mass-curseur-fond);
+}
+
+:global([data-theme='mass']) .ecranSeance .steppersLigne :global(.tnum) {
+  color: #fff;
+  font-family: 'Barlow Mass', var(--font-cond);
+  font-size: 1.75rem;
+  font-style: italic;
+  font-weight: 800;
+}
+
+/* Boutons de la carte (lot C) : « Valider la série » comme « Démarrer » ;
+   Consignes, Remarque, Documenter, Remplacer, Rep ratée sombres et bordés ;
+   « Ajouter un exercice » au trait rouge plein. */
+:global([data-theme='mass']) .ecranSeance .validate {
+  border: 1px solid var(--mass-rouge-bord);
+  border-radius: 12px;
+  background: var(--mass-degrade-action);
+  font-family: 'Barlow Mass', var(--font-cond);
+  font-size: 1.1875rem;
+  font-style: italic;
+  font-weight: 800;
+  text-transform: uppercase;
+  box-shadow:
+    var(--mass-liseret-action),
+    0 0 14px rgb(226 10 17 / 40%);
+}
+
+:global([data-theme='mass']) .ecranSeance .tiroir,
+:global([data-theme='mass']) .ecranSeance .replaceButton,
+:global([data-theme='mass']) .ecranSeance .failToggle,
+:global([data-theme='mass']) .ecranSeance .mediaAction {
+  border: 1px solid var(--mass-sombre-bord);
+  border-radius: 10px;
+  background: var(--mass-sombre-fond);
+  box-shadow: var(--mass-liseret);
+  color: #fff;
+}
+
+:global([data-theme='mass']) .ecranSeance .failToggleOn {
+  border-color: var(--mass-rouge-bord);
+  background: var(--mass-degrade-choix);
+}
+
+:global([data-theme='mass']) .ecranSeance .addButton {
+  border: 1.5px solid var(--mass-rouge);
+  border-radius: 12px;
+  background: linear-gradient(180deg, rgb(120 10 16 / 22%) 0%, rgb(60 5 8 / 14%) 100%);
+  color: #fff;
+}
+
+/* Panneaux et états de la séance (lot D) : cartes anthracite bordées au lieu
+   des filets de couleur à gauche ; champs comme ceux du combiné. */
+:global([data-theme='mass']) .ecranSeance .panel,
+:global([data-theme='mass']) .ecranSeance .mediaPanel,
+:global([data-theme='mass']) .ecranSeance .exNote {
+  border: 1px solid var(--mass-carte-bord);
+  border-radius: 12px;
+  background: var(--mass-carte-fond);
+  box-shadow: var(--mass-liseret);
+}
+
+:global([data-theme='mass']) .ecranSeance .mediaBlock {
+  border: 1px solid var(--mass-carte-bord);
+  border-radius: 10px;
+  background: #0e0e0f;
+}
+
+:global([data-theme='mass']) .ecranSeance .panelTitle,
+:global([data-theme='mass']) .ecranSeance .mediaBlockTitle,
+:global([data-theme='mass']) .ecranSeance .supersetTitle {
+  color: #fff;
+  font-family: 'Barlow Mass', var(--font-cond);
+  font-style: italic;
+  font-weight: 800;
+  font-size: 1.25rem;
+  letter-spacing: 0.01em;
+  line-height: 1.1;
+}
+
+:global([data-theme='mass']) .ecranSeance .panelSearch,
+:global([data-theme='mass']) .ecranSeance .exNoteField {
+  border: 1px solid var(--mass-curseur-bord);
+  border-radius: 10px;
+  background: var(--mass-champ-fond);
+  color: #fff;
+}
+
+/* Le superset garde son cadre rouge (il se repère de loin), sur une carte
+   anthracite. */
+:global([data-theme='mass']) .ecranSeance .superset {
+  border-color: var(--mass-rouge);
+  border-radius: 14px;
+  background: var(--mass-carte-fond);
+}

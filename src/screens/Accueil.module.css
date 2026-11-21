@@ -1,0 +1,490 @@
+/*
+ * L'accueil Dcross-fit.
+ *
+ * Toutes les couleurs viennent des jetons du thème `dcross` : graphite,
+ * anthracite, blanc, rouge sportif. Aucune valeur en dur, pour que le jour où
+ * la charte bouge, elle bouge d'un seul endroit.
+ */
+
+/*
+ * Pas de marge horizontale sur le conteneur : c'est CHAQUE bloc qui porte la
+ * sienne, comme dans les deux autres écrans de la plateforme.
+ *
+ * L'inverse était vrai, et l'en-tête devait alors annuler cette marge pour
+ * aller d'un bord à l'autre. La même astuce appliquée au parcours et au
+ * catalogue, dont le conteneur n'a jamais eu de marge, a fait déborder tout
+ * leur contenu hors de l'écran.
+ */
+.ecran {
+  padding: 0 0 var(--bottom-space);
+}
+
+.corps {
+  padding: 0 var(--pad);
+}
+
+.bienvenue {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 14px 0 14px;
+}
+
+.bonjour {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  font-size: 1.22rem;
+  font-weight: 800;
+  color: var(--ink);
+}
+
+/* Le prénom et la main restent sur la même ligne, quoi qu'il arrive. */
+.bonjourLigne {
+  display: block;
+  white-space: nowrap;
+}
+
+.sousBienvenue {
+  font-size: var(--fs-body);
+  font-weight: 400;
+  color: var(--ink-3);
+}
+
+/*
+ * L'emplacement du profil : un rond, pas un bouton.
+ *
+ * Il n'y a pas de comptes utilisateurs dans cette application. Le rond garde
+ * la place qu'il occupe dans la maquette sans promettre une fonctionnalité
+ * qui n'existe pas — un cercle cliquable qui n'ouvrirait rien serait pire
+ * qu'un cercle inerte.
+ */
+.profil {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  color: var(--ink-2);
+}
+
+.attente {
+  margin: 0 0 14px;
+  color: var(--ink-3);
+}
+
+/* -------------------------------------------------- programme en cours -- */
+
+/*
+ * La carte du programme en cours est la plus grande de l'écran, et c'est
+ * délibéré : c'est la réponse à « où j'en suis », qui est la raison pour
+ * laquelle on ouvre l'application.
+ */
+.enCours {
+  position: relative;
+  display: block;
+  width: 100%;
+  min-height: 160px;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg, 18px);
+  background: var(--surface);
+  text-align: left;
+  box-shadow: var(--shadow-card);
+}
+
+.enCoursPhoto {
+  position: absolute;
+  inset: 0;
+}
+
+.enCoursPhoto img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/*
+ * Le voile part du bas et s'éclaircit vers le haut : le texte occupe la
+ * gauche et le bas de la carte, la photo reste lisible à droite.
+ */
+.enCoursVoile {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(
+      90deg,
+      rgb(var(--voile) / 96%) 0%,
+      rgb(var(--voile) / 70%) 58%,
+      rgb(var(--voile) / 20%) 100%
+    ),
+    linear-gradient(0deg, rgb(var(--voile) / 85%) 0%, rgb(var(--voile) / 0%) 70%);
+}
+
+.enCoursCorps {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: var(--pad);
+}
+
+.badge {
+  align-self: flex-start;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--ink-on-accent);
+  font-family: var(--font-cond);
+  font-size: var(--fs-micro, 0.75rem);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.enCoursNom {
+  font-family: var(--font-cond);
+  font-size: 1.9rem;
+  font-style: italic;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--ink);
+  text-transform: uppercase;
+}
+
+.enCoursSemaine {
+  font-size: var(--fs-body);
+  color: var(--ink-2);
+}
+
+.enCoursSemaine b {
+  color: var(--ink);
+}
+
+.jauge {
+  display: block;
+  height: 6px;
+  margin-top: 6px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 16%);
+}
+
+.jauge i {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--accent);
+}
+
+.enCoursChiffres {
+  font-size: var(--fs-small);
+  color: var(--ink-2);
+}
+
+/*
+ * La pastille de chevron.
+ *
+ * Deux usages, deux positionnements, et c'est la raison d'être des deux
+ * classes : dans la carte du programme en cours elle est posée en absolu sur
+ * la photo, dans une ligne elle est un simple élément de la rangée.
+ *
+ * Les avoir fondues en une seule classe absolue a produit un chevron fantôme
+ * au milieu de l'écran : « Mon parcours » n'était pas un ancêtre positionné,
+ * donc son chevron se calait sur la fenêtre et flottait par-dessus la carte du
+ * programme.
+ */
+.chevron {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  background: var(--surface-3);
+  color: var(--ink-2);
+}
+
+.chevronCarte {
+  composes: chevron;
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  transform: translateY(-50%);
+  background: rgb(255 255 255 / 12%);
+  color: var(--ink);
+}
+
+/* ------------------------------------------------- prochaine séance ---- */
+
+.prochaine,
+.parcours {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 72px;
+  margin-top: 12px;
+  padding: 12px var(--pad);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  text-align: left;
+}
+
+.prochaineIcone,
+.parcoursIcone {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-sm);
+  background: var(--accent-dim);
+  color: var(--accent-ink);
+}
+
+.prochaineTexte {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.prochaineTexte b {
+  font-size: var(--fs-body);
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.prochaineEtiquette {
+  font-size: var(--fs-small);
+  color: var(--ink-3);
+}
+
+/*
+ * La ligne de méta ne se coupe pas entre le pictogramme et sa valeur.
+ *
+ * Sans `white-space: nowrap` sur les groupes, « ≈ 61 min » passait à la ligne
+ * en laissant son chrono seul au-dessus, et la date se coupait au milieu.
+ */
+.prochaineMeta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 5px;
+  font-size: 0.8rem;
+  color: var(--ink-3);
+}
+
+.prochaineMeta > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+.lecture {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 46px;
+  border-radius: var(--radius-sm);
+  background: var(--accent);
+  color: var(--ink-on-accent);
+}
+
+/* ------------------------------------------------------- familles ------ */
+
+.sectionTete {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 26px 0 12px;
+}
+
+/* Le trait rouge devant le titre de section, comme dans la maquette. */
+.sectionTitre {
+  position: relative;
+  margin: 0;
+  padding-left: 16px;
+  font-family: var(--font-cond);
+  font-size: 1.3rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: var(--ink);
+  text-transform: uppercase;
+}
+
+.sectionTitre::before {
+  content: '';
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  left: 0;
+  width: 5px;
+  border-radius: 2px;
+  background: var(--accent);
+  transform: skewX(-12deg);
+}
+
+.sectionLien {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-height: var(--tap);
+  padding: 0;
+  color: var(--ink-3);
+  font-size: var(--fs-small);
+}
+
+/*
+ * Trois cartes sur une ligne, qui tiennent sur la largeur d'un téléphone.
+ *
+ * `minmax(0, 1fr)` et non `1fr` : sans le minimum à zéro, un nom long force la
+ * colonne à s'élargir et la troisième carte sort de l'écran.
+ */
+.familles {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.famille {
+  position: relative;
+  display: block;
+  aspect-ratio: 3 / 4;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  text-align: left;
+}
+
+.famillePhoto {
+  position: absolute;
+  inset: 0;
+}
+
+.famillePhoto img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/*
+ * La teinte de la famille, posée sur la photo.
+ *
+ * Elle vient de `data/famillesVisuel.ts` via la variable `--teinte`, et non
+ * d'une règle par famille écrite ici : trois écrans montrent ces cartes, et
+ * trois jeux de règles finiraient par diverger.
+ */
+.familleVoile {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(0deg, rgb(var(--voile) / 94%) 8%, rgb(var(--voile) / 25%) 72%),
+    linear-gradient(0deg, color-mix(in srgb, var(--teinte) 52%, transparent), transparent 85%);
+}
+
+.familleBadge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 1;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--teinte, rgb(255 255 255 / 14%));
+  color: var(--ink);
+  font-family: var(--font-cond);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.familleTexte {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  left: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.familleNom {
+  font-family: var(--font-cond);
+  font-size: 1.35rem;
+  font-style: italic;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--ink);
+  text-transform: uppercase;
+}
+
+/* Un nom long tient dans la tuile au lieu d'en sortir. Voir AccueilScreen. */
+.familleNomLong {
+  font-size: 1rem;
+  letter-spacing: -0.01em;
+}
+
+.familleSous {
+  font-size: 0.72rem;
+  line-height: 1.2;
+  color: var(--ink-2);
+}
+
+/*
+ * Les trois barres obliques, à la couleur de la famille.
+ *
+ * C'est la signature visuelle reprise de la maquette : elle distingue les
+ * familles d'un coup d'œil, y compris quand la photo manque — ce qui est le
+ * cas de FEMMES aujourd'hui.
+ */
+.barres {
+  display: flex;
+  gap: 3px;
+  margin-top: 6px;
+}
+
+.barres i {
+  display: block;
+  width: 11px;
+  height: 5px;
+  border-radius: 1px;
+  background: var(--teinte, var(--accent));
+  transform: skewX(-24deg);
+}
+
+.barres i:nth-child(2) {
+  opacity: 0.75;
+}
+
+.barres i:nth-child(3) {
+  opacity: 0.5;
+}
+
+/* ------------------------------------------------------- parcours ------ */
+
+.parcours {
+  margin-top: 22px;
+}
+
+.parcoursIcone {
+  background: var(--surface-3);
+  color: var(--ink-2);
+}

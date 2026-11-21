@@ -1,0 +1,692 @@
+/*
+ * En-tête de retransmission.
+ *
+ * Le décor est en fond, le texte au-dessus, et l'un ne doit jamais coûter la
+ * lisibilité de l'autre : d'où le voile dégradé entre les deux.
+ */
+
+.header {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 18px var(--pad) 20px;
+  background: linear-gradient(180deg, var(--bg-2) 0%, var(--bg) 100%);
+  isolation: isolate;
+}
+
+/*
+ * Le voile. Sans lui, un titre blanc posé sur une photo de stade éclairé perd
+ * son contraste exactement là où les projecteurs sont les plus vifs.
+ */
+.header::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(180deg, rgb(var(--voile) / 35%) 0%, rgb(var(--voile) / 78%) 100%);
+  pointer-events: none;
+}
+
+.content {
+  position: relative;
+}
+
+/*
+ * Le voile du TEXTE, et non celui de l'en-tête.
+ *
+ * Le voile dégradé réglé en pourcentage marchait pour un titre d'une ligne et
+ * lâchait pour un titre de trois : « Combine initial — sauts, sprints, squat
+ * 1RM » remontait le bloc de texte jusqu'au tiers supérieur, là où le voile
+ * est volontairement transparent, et le sous-titre argenté y tombait à
+ * 2,5:1 sur les projecteurs.
+ *
+ * Celui-ci est accroché au bloc de texte lui-même : il fait exactement sa
+ * hauteur, plus 40 px de fondu au-dessus. Un titre long descend le fondu
+ * avec lui, un titre court laisse la photo respirer. Il va jusqu'aux bords
+ * de l'écran, sinon on verrait son arête dans la marge.
+ *
+ * Mesuré, pire pixel derrière le texte : titre blanc ≥ 9:1, sur-titre
+ * argenté ≥ 5,5:1, sur les sept visuels.
+ */
+.content::before {
+  content: '';
+  position: absolute;
+  left: calc(-1 * var(--pad));
+  right: calc(-1 * var(--pad));
+  top: -40px;
+  bottom: -22px;
+  z-index: -1;
+  pointer-events: none;
+  background: linear-gradient(
+    180deg,
+    rgb(var(--voile) / 0%) 0%,
+    rgb(var(--voile) / 62%) 34px,
+    rgb(var(--voile) / 86%) 64px,
+    rgb(var(--voile) / 93%) 100%
+  );
+}
+
+/*
+ * La photo détourée : vignette en haut à droite, jamais sous le texte.
+ *
+ * `z-index: 0` et non -1 : le voile `::after` de l'en-tête, qui vit lui aussi
+ * à -1 mais se dessine après les enfants, passait PAR-DESSUS et le ballon
+ * n'était plus qu'une forme sombre. À 0 elle est au-dessus du voile, et
+ * toujours sous `.content` — qui vient après elle dans le DOM.
+ *
+ * Le dégradé de masque efface son bord bas-gauche : sans lui, un objet
+ * détouré s'arrête sur une arête nette au milieu du titre.
+ */
+/*
+ * Le visuel détouré : grand, et fondu dans le fond.
+ *
+ * Trois états successifs, et deux erreurs de ma part avant celui-ci.
+ *
+ * 1. À l'origine : dimensionné par la largeur de l'écran, coupé en haut et à
+ *    droite. Tant que les en-têtes avaient des hauteurs différentes, le
+ *    débord passait pour un cadrage ; une fois tous alignés, c'était le seul
+ *    élément coupé de l'application.
+ * 2. Ma correction : petit et entièrement dans le cadre. Guillaume : « c'est
+ *    pire ». Il avait raison — un objet net et minuscule dans un coin ne
+ *    ressemble à rien, là où les six autres en-têtes sont des photos pleine
+ *    page que le voile fait disparaître dans le fond.
+ * 3. Ici : grand, et fondu. Il occupe toute la hauteur de l'en-tête, déborde
+ *    volontairement en haut et à droite, et son masque radial le dissout vers
+ *    la gauche et le bas — là où passent le titre et le sous-titre. Il se lit
+ *    comme une ambiance, pas comme une vignette posée.
+ *
+ * L'opacité est basse pour la même raison. Le ballon est le SEUL visuel
+ * détouré de l'application ; les six autres passent sous le voile de
+ * l'en-tête, qui les éteint. Celui-ci est au-dessus du voile — sans quoi il
+ * disparaîtrait entièrement — et c'est donc son opacité qui joue ce rôle.
+ */
+.photo {
+  top: -22px;
+  right: -34px;
+  width: auto;
+  height: 104%;
+  z-index: 0;
+  opacity: 0.55;
+  mask-image: radial-gradient(120% 130% at 88% 8%, #000 28%, rgb(0 0 0 / 50%) 62%, transparent 92%);
+}
+
+/*
+ * UNE SEULE HAUTEUR pour toutes les rubriques d'un programme.
+ *
+ * Elle a longtemps varié, et c'est ce que Guillaume a vu : le trait rouge et
+ * le titre ne tombaient pas au même endroit d'un onglet à l'autre. Trois
+ * hauteurs cohabitaient — 112 px sans photo, 196 px en version courte, et
+ * 42 % de la hauteur d'écran pour l'écran Aujourd'hui. Mesuré sur ses
+ * captures : le trait était à 170 pt sur Progrès, Semaine et Combine, à
+ * 143 sur Réglages, à 108 sur Nutrition et à 293 sur Aujourd'hui.
+ *
+ * Un en-tête dont la hauteur dépend du cadrage de sa photo ou de la présence
+ * d'un paragraphe est un en-tête dont personne ne peut prédire la position.
+ * 196 px est la valeur des trois écrans qu'il a désignés comme référence.
+ *
+ * Le coût est assumé et il n'est pas nul : l'écran Aujourd'hui perd sa grande
+ * photo de une. Elle avait été choisie pour remplir un écran qui sonnait
+ * creux ; l'alignement a été jugé plus important.
+ */
+.header {
+  min-height: 196px;
+}
+
+/*
+ * `.hero` reste le marqueur « cette photo remplit le fond » : il décide du
+ * voile et du calque, ni de la hauteur ni du rembourrage.
+ *
+ * Quatre rembourrages cohabitaient — 18/20 de base, 14/14 en version courte,
+ * 22 en bas avec photo, 14/16 avec les deux. Comme le bloc de titre est calé
+ * EN BAS, chacun déplaçait le trait rouge de quelques points : l'écran
+ * Aujourd'hui tombait 6 pt plus haut que les autres, et les écrans sans photo
+ * 2 pt plus bas. Il n'en reste qu'un.
+ */
+
+/*
+ * Ce qui suivait le sous-titre DANS l'en-tête, et qui vit maintenant dessous.
+ *
+ * Même marge horizontale que le bloc de titre, pour que les deux restent sur
+ * la même verticale. Le fond de l'en-tête fond déjà vers la couleur de page :
+ * ces blocs ne changent donc pas d'aspect en sortant du cadre.
+ */
+.apres {
+  padding: 10px var(--pad) 0;
+}
+
+/* ------------------------------------------------- photo pleine largeur -- */
+
+/*
+ * La photo d'ambiance occupe tout l'en-tête. Elle part à 100 % d'opacité :
+ * c'est le voile qui règle sa présence, pas une transparence. Une photo
+ * à demi effacée sur un fond marine vire au bleu délavé ; la même photo
+ * entière sous un voile sombre garde ses noirs et ses lumières.
+ */
+.fond {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -2;
+  opacity: 1;
+  /*
+   * FEMMES dissout le bas de la photo dans le fond au lieu de la couper.
+   *
+   * `--masque-fond` n'existe que sur ce thème ; ailleurs le repli `none`
+   * laisse la photo entière, donc POWER et MASS sont inchangés.
+   *
+   * Pourquoi un masque et pas un voile de plus : un voile est un rectangle,
+   * et un rectangle a une arête basse. C'était le défaut que Guillaume avait
+   * vu — on la déplaçait sans la supprimer. Un masque, lui, rend la photo
+   * progressivement transparente et laisse le fond de page transparaître.
+   */
+  -webkit-mask-image: var(--masque-fond, none);
+  mask-image: var(--masque-fond, none);
+}
+
+/*
+ * Le voile de lecture, et la raison d'être de tout ce composant.
+ *
+ * Un stade de nuit, ce sont des projecteurs : des zones à 95 % de blanc,
+ * exactement là où le titre passe. Sans voile, un titre blanc y tombe à
+ * 1,1:1 — invisible.
+ *
+ * Mais un voile uniforme éteint la photo : la première version noircissait
+ * les projecteurs et il ne restait qu'une tache sombre. Le texte étant calé
+ * EN BAS de l'en-tête (`justify-content: flex-end`), le voile n'a aucune
+ * raison d'assombrir le haut. Il reste donc quasi transparent sur le tiers
+ * supérieur — là où vivent les projecteurs et les tribunes — et ne devient
+ * opaque qu'à partir de 55 %, là où commence la date.
+ */
+.voile {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: linear-gradient(
+    180deg,
+    rgb(var(--voile) / 10%) 0%,
+    rgb(var(--voile) / 20%) 40%,
+    rgb(var(--voile) / 48%) 100%
+  );
+}
+
+/*
+ * Le raccord du bas. Sans lui, la photo s'arrête sur une ligne nette au
+ * milieu de l'écran et on voit le collage. Six pixels de dégradé vers la
+ * couleur de fond suffisent à ce que l'image semble y entrer.
+ */
+.voile::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 56px;
+  background: linear-gradient(180deg, rgb(var(--voile) / 0%) 0%, var(--bg) 100%);
+}
+
+.yard {
+  z-index: -1;
+  opacity: 0.16;
+}
+
+/*
+ * Sur-titre : petites capitales très pistées. C'est le détail typographique
+ * qui fait « tableau de score » — un mot ordinaire posé comme une étiquette.
+ */
+.eyebrow {
+  color: var(--ink-3);
+  font-family: var(--font-cond);
+  font-size: var(--fs-small);
+  font-weight: 700;
+  letter-spacing: var(--track-eyebrow);
+  text-transform: uppercase;
+}
+
+/*
+ * Le titre. Condensé, capitales, légèrement penché.
+ *
+ * L'inclinaison est obtenue par `skewX` et non par une italique : la police
+ * embarquée n'a pas de variante italique, et en charger une seconde pour
+ * quelques titres coûterait 20 Ko pour rien. Le biais est léger — 6 degrés —
+ * parce qu'au-delà les capitales condensées commencent à se chevaucher.
+ */
+.title {
+  margin-top: 2px;
+  color: var(--ink);
+  font-family: var(--font-cond);
+  font-size: var(--fs-display);
+  font-weight: 700;
+  line-height: 0.95;
+  letter-spacing: var(--track-display);
+  text-transform: uppercase;
+  transform: skewX(-6deg);
+  transform-origin: left bottom;
+  text-shadow: var(--ombre-titre);
+}
+
+/* Sous-titre entre deux traits rouges — la ligne de générique. */
+/*
+ * `min-height` : la ligne occupe sa place même quand il n'y a pas de
+ * sous-titre à écrire. C'est elle qui garantit que le titre tombe au même
+ * pixel dans toutes les rubriques, avec ou sans sous-titre.
+ */
+.subtitleRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 18px;
+  margin-top: 10px;
+}
+
+/*
+ * Le sous-titre passe à la ligne plutôt que de se couper.
+ *
+ * En `nowrap` + ellipse, « Base de force, technique hinge, apprentissage des
+ * sauts » devenait « BASE DE FORCE, TECHNIQUE HINGE, APPRENTI… » et le filet
+ * de droite se réduisait à un moignon de 12 px. Deux blocs sur six sont dans
+ * ce cas — dont celui de la semaine 1, le premier écran qu'un nouveau venu
+ * ouvre après avoir posé sa date.
+ *
+ * Deux lignes au maximum : au-delà, le titre perdrait sa place.
+ */
+.subtitle {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  color: var(--ink-2);
+  font-family: var(--font-cond);
+  font-size: var(--fs-small);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  line-height: 1.3;
+}
+
+/*
+ * Le trait de gauche est court et fixe, celui de droite occupe ce qui reste :
+ * le sous-titre reste calé à gauche, et la ligne va jusqu'au bord quelle que
+ * soit la longueur du texte.
+ */
+.ruleLeft {
+  flex: none;
+  width: 22px;
+}
+
+/*
+ * Le filet de droite garde une longueur minimale lisible : réduit à 12 px il
+ * ressemblait à une poussière plus qu'à un trait.
+ */
+.ruleRight {
+  flex: 1;
+  width: auto;
+  min-width: 28px;
+}
+
+/*
+ * MASS : le « // » rouge après le titre, relevé dans les maquettes de
+ * Guillaume (14 novembre). Décoratif : masqué aux lecteurs d'écran par
+ * `content … / ""`, et réservé au thème MASS.
+ */
+:global([data-theme='mass']) .title::after {
+  content: '\00a0//' / '';
+  color: var(--accent-bright);
+}
+
+/*
+ * La marque : « MASS // » en argent, très gros, au-dessus du titre du jour.
+ * Relevé sur la maquette de l'Accueil : capitales de 50 px de haut (corps
+ * ≈ 72 px), dégradé du blanc #f3f4f5 au gris #878887. Le « // » passe du
+ * titre à la marque. L'ombre est un `drop-shadow` : un `text-shadow` se
+ * peindrait PAR-DESSUS un dégradé découpé dans le texte.
+ */
+.marque {
+  width: fit-content;
+  margin: 4px 0 2px;
+  font-family: var(--font-cond);
+  font-size: clamp(3.5rem, 18vw, 4.5rem);
+  font-weight: 700;
+  line-height: 0.9;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+  transform: skewX(-8deg);
+  transform-origin: left bottom;
+  background: linear-gradient(180deg, #f3f4f5 0%, #d6d7d8 42%, #878887 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 2px 6px rgb(0 0 0 / 55%));
+}
+
+.marque::after {
+  content: '\00a0//' / '';
+  color: var(--accent-bright);
+}
+
+/* Le titre du jour, en seconde ligne : 22 px de capitales sur la maquette. */
+.title.titreSecond {
+  max-width: 74%;
+  font-size: clamp(1.75rem, 8.2vw, 2.0625rem);
+  line-height: 1.02;
+  color: #e3e4e6;
+}
+
+:global([data-theme='mass']) .title.titreSecond::after {
+  content: none;
+}
+
+/*
+ * MASS : les photos des maquettes ont leur sujet À DROITE et du noir à
+ * gauche. Le voile vertical de POWER (fait pour un stade éclairé sur toute
+ * la largeur) éteindrait l'athlète derrière le titre ; ici le voile du texte
+ * est HORIZONTAL — opaque à gauche sous le titre, transparent à droite sur
+ * le sujet. Les lignes de terrain, décor de POWER, n'ont rien à faire sur
+ * une photo de salle.
+ */
+:global([data-theme='mass']) .hero .content::before {
+  background: linear-gradient(
+    90deg,
+    rgb(var(--voile) / 86%) 0%,
+    rgb(var(--voile) / 68%) 50%,
+    rgb(var(--voile) / 0%) 88%
+  );
+}
+
+:global([data-theme='mass']) .hero .voile {
+  background: linear-gradient(
+    180deg,
+    rgb(var(--voile) / 0%) 0%,
+    rgb(var(--voile) / 8%) 60%,
+    rgb(var(--voile) / 30%) 100%
+  );
+}
+
+:global([data-theme='mass']) .hero .yard,
+:global([data-theme='mass']) .hero .lueur {
+  display: none;
+}
+
+/*
+ * Le voile général de l'en-tête (35 → 78 %) est réglé pour des projecteurs
+ * de stade. Ces photos-ci sont déjà presque noires : sous lui, l'athlète
+ * disparaissait. Il ne garde que le raccord du bas.
+ */
+:global([data-theme='mass']) .hero::after {
+  background: linear-gradient(180deg, rgb(var(--voile) / 0%) 55%, rgb(var(--voile) / 40%) 100%);
+}
+
+/*
+ * Variante « argent » : l'écran Semaine MASS, relevé sur la référence de
+ * Guillaume (capture d'iPhone, 1 px de référence = 1,336 px CSS).
+ *
+ * - La photo passe sous la barre d'état, comme sur la référence : l'en-tête
+ *   remonte de la zone de sécurité et la rend en rembourrage. Hors iPhone
+ *   (zone nulle), rien ne bouge.
+ * - Titre : capitales de 47 px, vrai italique extra-gras, argent — blanc
+ *   en haut, une cassure grise sous le milieu, comme un métal poli. Pas de
+ *   « // » ici.
+ * - Sous le titre, un trait rouge de 3 px qui s'éteint vers la droite.
+ */
+.argent {
+  --haut-ecran: env(safe-area-inset-top, 0px);
+  min-height: calc(202px + var(--haut-ecran));
+  margin-top: calc(-1 * var(--haut-ecran));
+  padding: calc(18px + var(--haut-ecran)) 22px 8px;
+}
+
+/*
+ * Le voile du texte (horizontal sur MASS) s'arrêtait sur une arête nette en
+ * travers de la photo : il naît ici en fondu. Le haut de l'en-tête est le
+ * noir de la page, comme sur la référence.
+ */
+.argent {
+  background: var(--bg);
+}
+
+.argent .content::before {
+  -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 48px);
+  mask-image: linear-gradient(180deg, transparent 0, #000 48px);
+}
+
+.argent .eyebrow {
+  color: #e6e6e6;
+  font-family: 'Barlow Mass', var(--font-cond);
+  font-size: 1.0625rem;
+  font-style: italic;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+}
+
+.argent .title {
+  width: fit-content;
+  margin: 2px 0 0 -4px;
+  padding-right: 6px;
+  font-family: 'Barlow Mass', var(--font-cond);
+  font-size: 4.3rem;
+  letter-spacing: -0.005em;
+  font-style: italic;
+  font-weight: 800;
+  line-height: 0.9;
+  transform: none;
+  background: var(--mass-argent);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  text-shadow: none;
+  filter: var(--mass-ombre-titre);
+}
+
+/*
+ * La photo, à la place et à l'échelle de la référence : le disque y fait
+ * ≈ 215 px de diamètre, moyeu vers (262, 155) depuis le haut de l'écran.
+ * La photo (2:1) fait donc 446 × 223 ; son bord haut est fondu. Le bas reste
+ * fondu dans le noir par le voile de l'en-tête.
+ */
+.argent .fond {
+  inset: auto;
+  top: calc(var(--haut-ecran) - 21px);
+  /* Calée sur le bord DROIT : à gauche, un grand iPhone (430 px) laissait
+     une bande noire et une arête nette à droite de la photo. */
+  right: -19px;
+  width: 446px;
+  height: 223px;
+  -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 36px);
+  mask-image: linear-gradient(180deg, transparent 0, #000 36px);
+}
+
+:global([data-theme='mass']) .argent .title::after {
+  content: none;
+}
+
+.argent .subtitleRow {
+  margin-top: 14px;
+}
+
+.argent .subtitleRow::before {
+  content: '';
+  width: 108px;
+  height: 3px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, #e3141c 0%, #e3141c 52%, rgb(227 20 28 / 0%) 100%);
+  box-shadow: var(--mass-halo-trait);
+}
+
+/*
+ * POWER — les trois bandeaux du 14 novembre (Nutrition, Combine, Semaine) un
+ * peu plus présents : le voile général (35 → 78 %), réglé pour un stade
+ * éclairé, les effaçait trop (retour de Guillaume). Ces photos sont déjà
+ * sombres ; le titre blanc reste au-dessus de 15:1. Les autres en-têtes POWER
+ * (Aujourd'hui, Progression, Réglages) ne changent pas.
+ */
+.hero[data-visuel='nutritionPower']::after,
+.hero[data-visuel='combinePower']::after,
+.hero[data-visuel='semainePower']::after {
+  background: linear-gradient(180deg, rgb(var(--voile) / 15%) 0%, rgb(var(--voile) / 62%) 100%);
+}
+
+/* ===================================================================== */
+/*
+ * MASS — en-têtes SANS photo (porte de MASS FORCE, Progrès, Nutrition,
+ * Mesures, Réglages). Harmonisation validée par Guillaume (audit du
+ * 14 novembre), à partir des écrans validés :
+ *
+ * - plus de décor de POWER : ni halo de stade bleuté, ni lignes de terrain ;
+ *   le fond est le noir de la page ;
+ * - compact, comme le Combiné : le titre monte sous la barre d'état au lieu
+ *   d'attendre au bas d'un bandeau de 196 px resté vide sans photo ;
+ * - sur-titre et titre comme la Séance : vrai italique extra-gras, titre
+ *   argent. Le « // » rouge reste (règle MASS des titres) ;
+ * - la ligne de sous-titre entre deux traits rouges est celle, validée, de
+ *   l'Accueil.
+ *
+ * `:not(.hero)` : les en-têtes à photo (Accueil, Semaine) ont leurs règles.
+ */
+:global([data-theme='mass']) .header:not(.hero) {
+  min-height: 0;
+  padding: 6px var(--pad) 16px;
+  background: var(--bg);
+}
+
+:global([data-theme='mass']) .header:not(.hero)::after,
+:global([data-theme='mass']) .header:not(.hero) .lueur,
+:global([data-theme='mass']) .header:not(.hero) .yard {
+  display: none;
+}
+
+:global([data-theme='mass']) .header:not(.hero) .eyebrow {
+  color: #e6e6e6;
+  font-family: 'Barlow Mass', var(--font-cond);
+  font-size: 1.0625rem;
+  font-style: italic;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+
+:global([data-theme='mass']) .header:not(.hero) .title {
+  width: fit-content;
+  margin-top: 4px;
+  font-family: 'Barlow Mass', var(--font-cond);
+  font-size: 3.1rem;
+  font-style: italic;
+  font-weight: 800;
+  line-height: 0.95;
+  transform: none;
+  background: var(--mass-argent) 0 0 / 100% 0.95em repeat-y;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  text-shadow: none;
+  filter: var(--mass-ombre-titre);
+}
+
+/*
+ * MASS — l'Accueil fait passer sa photo sous la barre d'état, comme
+ * Semaine, Combiné et Séance (décision de Guillaume, audit du 14 novembre).
+ * L'en-tête remonte de la zone de sécurité et la rend en rembourrage : le
+ * texte ne bouge pas, seule la photo gagne le haut de l'écran.
+ */
+:global([data-theme='mass']) .avecMarque {
+  --haut-ecran: env(safe-area-inset-top, 0px);
+  min-height: calc(196px + var(--haut-ecran));
+  margin-top: calc(-1 * var(--haut-ecran));
+  padding-top: calc(18px + var(--haut-ecran));
+}
+
+/*
+ * MASS — en-têtes À photo hors Accueil et Semaine (bandeaux du 14 novembre :
+ * Nutrition, Progrès, Mesures, Réglages, et les onglets « à venir » de MASS
+ * FORCE). Même titre que les en-têtes MASS sans photo (argent, vrai italique
+ * extra-gras), et la photo passe sous la barre d'état comme sur l'Accueil.
+ * L'Accueil (`.avecMarque`) et la Semaine (`.argent`) gardent leurs règles.
+ */
+:global([data-theme='mass']) .hero:not(.avecMarque):not(.argent) {
+  --haut-ecran: env(safe-area-inset-top, 0px);
+  min-height: calc(196px + var(--haut-ecran));
+  margin-top: calc(-1 * var(--haut-ecran));
+  padding-top: calc(18px + var(--haut-ecran));
+}
+
+:global([data-theme='mass']) .hero:not(.avecMarque):not(.argent) .eyebrow {
+  color: #e6e6e6;
+  font-family: 'Barlow Mass', var(--font-cond);
+  font-size: 1.0625rem;
+  font-style: italic;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+
+:global([data-theme='mass']) .hero:not(.avecMarque):not(.argent) .title {
+  width: fit-content;
+  font-family: 'Barlow Mass', var(--font-cond);
+  font-size: 3.1rem;
+  font-style: italic;
+  font-weight: 800;
+  line-height: 0.95;
+  transform: none;
+  background: var(--mass-argent) 0 0 / 100% 0.95em repeat-y;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  text-shadow: none;
+  filter: var(--mass-ombre-titre);
+}
+
+/*
+ * MASS — retours de Guillaume du 15 novembre (captures d'iPhone).
+ *
+ * 1. Un seul trait rouge sous le titre, celui de Semaine et du Combiné :
+ *    court, il s'éteint vers la droite. Plus de ligne de sous-titre entre
+ *    deux traits ; le sous-titre (« Semaine 1 / 4 », « Contenu à venir »…)
+ *    reste, en dessous du trait.
+ */
+:global([data-theme='mass']) .header:not(.argent) .ruleLeft,
+:global([data-theme='mass']) .header:not(.argent) .ruleRight {
+  display: none;
+}
+
+:global([data-theme='mass']) .header:not(.argent) .subtitleRow {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+:global([data-theme='mass']) .header:not(.argent) .subtitleRow::before {
+  content: '';
+  flex: none;
+  width: 108px;
+  height: 3px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, #e3141c 0%, #e3141c 52%, rgb(227 20 28 / 0%) 100%);
+  box-shadow: var(--mass-halo-trait);
+}
+
+/*
+ * 2. Le voile du titre s'arrêtait sur une arête nette au milieu de la photo
+ *    (« un film noir sur 60-70 % du bandeau ») : il naît désormais en fondu.
+ *    Semaine (`.argent`) a déjà le sien.
+ */
+:global([data-theme='mass']) .hero:not(.argent) .content::before {
+  /* Le fondu tient dans les 40 px AU-DESSUS du texte : le titre garde tout
+     son voile (contraste mesuré ≥ 4:1). */
+  -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 40px);
+  mask-image: linear-gradient(180deg, transparent 0, #000 40px);
+}
+
+/*
+ * 3. Accueil : la tête de l'athlète est tout en haut de la photo. Posée dès
+ *    le haut de l'écran, elle passait sous l'heure et le visage était coupé.
+ *    La photo commence sous la barre d'état ; son haut, déjà noir, se fond
+ *    dans le fond de page.
+ */
+:global([data-theme='mass']) .avecMarque .fond {
+  inset: auto 0 0 0;
+  top: var(--haut-ecran, 0px);
+  height: calc(100% - var(--haut-ecran, 0px));
+  -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 22px);
+  mask-image: linear-gradient(180deg, transparent 0, #000 22px);
+}

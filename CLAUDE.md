@@ -1,0 +1,497 @@
+# Dcross-fit — notes pour Claude Code
+
+Application web installable (PWA) de préparation physique. Hors ligne à 100 %,
+aucune donnée ne quitte l'appareil : pas de compte, pas de serveur.
+
+Interlocuteur : **Guillaume**, 34 ans, père de famille, peu de temps, débutant
+en IA. **Réponds toujours en français.**
+
+> **Ce dépôt (`majk`) est la COPIE DE COMPARAISON** de `programme-12-semaines`
+> (copiée au commit `3b73248`), créée pour appliquer la nouvelle DA claire
+> sans toucher l'appli actuelle. Trois différences voulues avec l'original :
+> base IndexedDB nommée `majk` (et non `programme-12-semaines`), clés
+> localStorage préfixées `majk2:`, et `deploy.yml` en déclenchement MANUEL
+> uniquement. Les deux applis partagent le domaine `descrosses.github.io` :
+> ne jamais remettre le nom de base d'origine, sinon elles écriraient dans la
+> même base. Le format d'export reste `programme-12-semaines` (l'import des
+> sauvegardes de l'original doit marcher).
+
+---
+
+## La règle qui prime sur toutes les autres
+
+**Le fichier `.md` est la source de vérité. Le code le transcrit, il ne le
+réinterprète pas.**
+
+- `programme-final-12-semaines.md` — le programme POWER 12, section par section
+  (§3 semaine type, §8 modifications par bloc, §11 règles de progression,
+  §13 objectifs). Il n'y a plus de §14 : le suivi de l'adducteur gauche a
+  été retiré, voir plus bas.
+- `plan-alimentaire-12-semaines.md` — le plan alimentaire personnel de
+  Guillaume.
+
+Des tests **relisent ces `.md`** et comparent case par case (`mainLiftTable.test.ts`,
+`program.test.ts`). Si le code et le `.md` divergent, le déploiement échoue.
+Quand tu changes une prescription, change les deux.
+
+---
+
+## Architecture
+
+| Dossier | Rôle | Interdit |
+|---|---|---|
+| `src/data/` | Transcription du `.md` : exercices, séances, règles de bloc | Aucune logique |
+| `src/engine/` | Fonctions **pures** : séance du jour, progression, feu tricolore | Aucun React |
+| `src/db/` | Dexie/IndexedDB — ce qui a été réellement fait | — |
+| `src/screens/`, `src/components/` | Affichage (CSS Modules) | — |
+
+Routage par hash : `#/session/{semaine}/{jour}`, `#/settings`, `#/nutrition`,
+`#/combine`. Les jours sont indexés 0 = lundi, 2 = mercredi, 4 = vendredi,
+5 = samedi, 6 = dimanche.
+
+---
+
+## Commandes
+
+```bash
+npm install          # conteneur neuf : vitest n'existe pas sans ça
+npm test             # suite complète
+npm run typecheck
+npm run build
+npm run empreinte    # régénère l'empreinte (voir plus bas)
+```
+
+Formatage : `npx prettier --write <fichiers touchés>`. **Jamais sur tout le
+dépôt.**
+
+---
+
+## L'empreinte, et son angle mort
+
+`src/engine/__fixtures__/empreinte.txt` fige les douze semaines, séance par
+séance, exercice par exercice. Toute modification du programme la fait tomber.
+
+Après l'avoir régénérée, **lis le diff et vérifie qu'il ne contient que ce que
+tu voulais changer.** C'est le meilleur garde-fou du dépôt.
+
+**Ce qu'elle ne voit pas :** elle compare les séries, le travail, la charge, le
+repos et le RPE — **pas les notes de prescription**. Une progression qui passe
+par la consigne lui est invisible : on peut vider les consignes et l'empreinte
+reste verte (vérifié). Si tu touches à des consignes, écris un test dédié
+(modèle : `src/engine/progressionTronc.test.ts`).
+
+---
+
+## Discipline de vérification
+
+Trois obligations avant d'annoncer qu'une chose marche :
+
+1. **Prouve un garde-fou en le cassant.** Casse délibérément la décision que tu
+   viens de prendre, vérifie que le test tombe, restaure. Un test qu'on n'a pas
+   vu échouer ne protège rien.
+2. **Regarde l'app.** Playwright est préinstallé :
+   `/opt/node22/lib/node_modules/playwright/index.mjs`, binaire
+   `/opt/pw-browsers/chromium`, option `--no-sandbox`. Viewport 402 × 874,
+   `deviceScaleFactor: 2`. L'écran Réglages exige un cycle actif : semer avec
+   `demarrerCycle` depuis `src/db/repo.ts`.
+3. **Dis les chiffres.** Durée de séance, nombre de tests, taille du diff. Pas
+   « ça marche ».
+
+---
+
+## Travailler avec Guillaume
+
+- **Ne déploie jamais sans son « déploie » explicite.** Commit et push sur la
+  branche, puis attends. Cette règle n'a pas d'exception.
+- **Une seule recommandation, tranchée.** Pas de liste d'options sans
+  conclusion. Son avis se corrige, pas son temps.
+- **Sois honnête, surtout quand ça contrarie la demande.** Les meilleures
+  décisions de ce dépôt sont nées d'un « voilà pourquoi c'est une mauvaise
+  idée » chiffré. Donne le coût réel (minutes de séance, tests cassés) avant
+  de coder.
+- **Termine par UNE action concrète.**
+- Niveau d'effort : jamais en dessous de `medium` pour la base de données ou un
+  calcul sportif.
+
+### Déploiement
+
+Commit → push → `create_pull_request` → attendre `validate-pr.yml` →
+`merge_pull_request` en **squash** avec le SHA complet (40 caractères) →
+vérifier `deploy.yml`.
+
+**Piège connu :** le merge en squash réécrit l'historique côté `main`. La PR
+suivante sur la même branche arrive en conflit (`mergeable_state: dirty`). Le
+force-push est bloqué par le classifieur — **fusionne `origin/main` dans la
+branche** plutôt que de la réécrire, puis vérifie que
+`git diff --stat origin/main..HEAD` ne contient que le travail nouveau.
+
+---
+
+## Le catalogue, et la famille FEMMES
+
+`src/data/catalogue.ts` décrit les familles et leur **état réel**.
+
+Un programme n'est `disponible` que s'il est **réellement jouable de bout en
+bout**. Tout le reste est `a-venir`, et un programme `a-venir` ne se démarre
+pas : le bouton n'existe pas, il n'est pas seulement grisé.
+
+| Famille | État |
+|---|---|
+| POWER | Disponible — c'est le programme de ce dépôt |
+| MASS | Trois programmes indépendants, ordre conseillé SANS verrou : HYPERTROPHIE (`mass8`, à venir) → FORCE (`mass-force`, **disponible en version de travail, S1 seule** — ouvert à la demande de Guillaume) → CONGESTION (`mass4`, disponible) |
+| FEMMES | Parcours de 8 étapes. Le cycle 1 (FEMMES 8) est **disponible** ; les 7 autres `a-venir` |
+| PERSO | Programme apporté par quelqu'un d'autre |
+
+**La place de FEMMES est déjà faite** : l'identifiant existe, l'entrée du
+catalogue existe, le bloc de thème `[data-theme='femmes']` existe dans
+`src/styles/tokens.css`. Ce qui manque, c'est le contenu sportif et l'identité
+visuelle.
+
+**N'invente ni l'un ni l'autre.** Pas d'objectifs, pas d'exercices, pas de
+durées. Ces règles viennent de Guillaume ; le code les cite comme « §4 » (ne
+rien inventer) et « §15 » (identité visuelle à définir plus tard).
+
+**L'identité visuelle, elle, est désormais POSÉE** — le §15 est honoré.
+Guillaume a fourni des maquettes, et `[data-theme='femmes']` les transcrit :
+registre synthwave, nuit violette (`--bg: #160a26`), néon magenta. Ce n'est
+pas le « rose par défaut » que la règle refusait, c'est un parti pris fourni.
+
+Un point à ne pas « corriger » : `--accent` vaut `#d1006e` et non le `#ff2d95`
+des maquettes. Le fluo ne porte que **3,46:1** sous du texte blanc, sous le
+seuil de 4,5 ; `#d1006e` remonte à **5,34**. Le néon n'est pas perdu, il vit
+dans `--accent-bright` pour les lueurs et les bordures, jamais sous du petit
+texte. Les contrastes du bloc ont tous été mesurés et sont écrits en commentaire.
+
+### Décision prise : le programme FEMMES sera GÉNÉRIQUE
+
+Pas calibré sur une personne. Plusieurs pratiquantes doivent pouvoir le suivre.
+
+**Ce qui est déjà générique, et qu'il ne faut surtout pas réécrire :**
+
+- Les charges des lifts principaux sont des **pourcentages du 1RM**
+  (`pct(82, 'back-squat', 95)` dans `mainLiftTable.ts`). Le troisième argument,
+  `kgOrigine`, n'est qu'une référence historique affichée : c'est le `%` qui
+  calcule la charge, à partir du 1RM saisi par la pratiquante.
+- Le **combine initial** (semaine 0) mesure ces 1RM : squat, bench, deadlift,
+  tractions. Le moteur en dérive tout le tableau.
+
+Autrement dit : une femme qui démarre à 40 kg de squat reçoit déjà les bonnes
+charges, sans qu'une ligne de code change.
+
+**Ce qui était personnel à Guillaume et EST SORTI :** le §14 (adducteur
+gauche). Plus de champ `painWatch`, plus d'écran de suivi de douleur, plus
+aucune consigne qui nomme sa blessure. Décision de Guillaume : « disparaît »,
+pas de mécanisme de blessure déclarée. La table `painLog` reste en base et
+dans l'export : on ne supprime pas des données saisies. Les décisions de
+programme qu'elle avait motivées (Zercher March déprogrammé, Copenhagen au
+vendredi en levier court) sont **gardées telles quelles**. Des tests
+(`coreCycle.test.ts`, `program.test.ts`) empêchent tout retour.
+
+**Ce qui reste strictement personnel à Guillaume, et doit sortir :**
+
+1. **Les rampes d'échauffement du combine** (`RAMP_SQUAT` et consorts) portent
+   des kilos absolus (« 147,5 seulement si 142,5 passe proprement »). À dériver
+   du 1RM estimé, ou à redemander à chaque combine.
+2. **Le plan alimentaire** (`plan-alimentaire-12-semaines.md`) est le sien.
+3. **Les objectifs du §13**, calculés sur ses 1RM à lui.
+
+**L'avertissement, corrigé.** Une première version de ces notes affirmait que
+« programme femme » n'est pas une catégorie physiologique. **C'est faux dans le
+cas qui nous occupe**, et la correction compte : le programme retenu pour le
+cycle 1 est un programme POST-PARTUM. Le diastasis des grands droits et la
+rééducation périnéale sont des réalités physiologiques précises, qui
+interdisent des exercices nommés et en imposent d'autres. Ce n'est pas du
+marketing, c'est de la sécurité.
+
+Ce qui reste vrai : un programme ne se justifie pas par le sexe seul. Il se
+justifie par sa **structure** — ici, des circuits en tours, du matériel léger à
+domicile, un questionnaire de sécurité bloquant et des substitutions
+automatiques. Rien de tout cela n'existe dans POWER 12, et c'est bien pour ça
+que le programme a lieu d'être.
+
+Demande à Guillaume le niveau visé, l'objectif, les jours disponibles, le
+matériel et la durée avant d'écrire la moindre séance.
+
+---
+
+## Ce qui est volontaire et n'est pas à « corriger »
+
+- Pas de comptes utilisateurs — tout est local, par choix.
+- Le Zercher March est **déprogrammé mais conservé au catalogue** : « on ne
+  supprime pas d'exercices existants ».
+- Le Bear Crawl est **déprogrammé dès la semaine 1 mais conservé au catalogue**,
+  pour la même raison. Le tronc du dimanche tient en deux exercices sur les
+  douze semaines.
+- Le samedi porte deux exercices de « flexion latérale » (Suitcase Carry +
+  Roman Side Bench). C'est l'**unique dérogation** à la règle « jamais deux
+  exercices du tronc de la même famille le même jour », écrite comme une paire
+  nommée et assumée par Guillaume.
+- **Case « Charge » vide = à toi de choisir, et l'écran le dit** (POWER).
+  Sans historique, un accessoire autorégulé ou un repère de forme n'affiche
+  aucun kilo (jamais la charge de l'auteur). `aideChargeVide`
+  (`engine/loadEntry.ts`) écrit dessous « Première fois : choisis une charge
+  qui tient les répétitions demandées à RPE x… » ; pour les 4 mouvements du
+  combine, « Charge calculée sur ton 1RM… ». Jamais au poids du corps, donc
+  jamais sur MASS. L'alternative du Landmine Press ne donne plus « 22 kg »
+  (charge de l'auteur) mais un repère relatif (−10 à 15 % du Landmine barre)
+  et le RPE — `.md` et code, `data/alternativeLandmine.test.ts`. Le RDL (§3
+  du `.md`) ne dit plus « S2 : 85 kg, S3 : 90 kg » mais une règle au RPE
+  (« monte d'un cran si le RPE […] est resté à 7 ou moins »), décision de
+  Guillaume — `data/consigneRdl.test.ts`. Le moteur, lui, n'a pas changé :
+  charge « forme » recalée sur le réel ; la règle RPE est une consigne.
+- **« Mon plan » (nutrition sans plan historique) se lit comme les « Repas
+  types »** (demande de Guillaume, 15 novembre) : une ligne par aliment (nom,
+  quantité, kcal), le curseur / « Remplacer » / « Retirer » seulement sur la
+  ligne touchée, les pastilles derrière « + Ajouter un aliment ». Le « % » de
+  l'en-tête est la part de la CIBLE du jour (le plan est incomplet), à défaut
+  du total du plan. `components/planPersoPresentation.test.tsx`.
+- **Photos des plats** (Guillaume, 15 novembre). Toucher une carte de « Choisir
+  un repas » ouvre `FicheRepas` (photo en grand, chaque ingrédient avec
+  quantité et kcal, « Choisir ce repas »). Dans « Mon plan », le repas porte la
+  vignette de son plat tant que TOUS les ingrédients du plat y sont
+  (`engine/repasReconnu.ts`) : quantité changée ou aliment ajouté la gardent,
+  ingrédient remplacé ou retiré l'efface. Rien n'est écrit en base. Les plats
+  aux brocolis utilisent `brocolisCuits` (« Brocolis cuits », fleurettes sur
+  les photos), jamais `brocolis` (« Purée de brocolis », celle du plan
+  historique, inchangée) ; le questionnaire « brocolis » pointe vers
+  `brocolisCuits`. `ficheRepas.test.tsx`, `repasReconnu.test.ts`,
+  `bibliothequeRepas.test.ts`.
+- **ME, MYSELF & I (programmes importés en JSON) — lots 1 à 5 FAITS.** Source :
+  `docs/ADR-perso.md` (branche `docs/adr-perso`). Validateur pur
+  (`engine/perso/`), table v25 `programmesImportes` et sauvegardes au format 4
+  (`db/programmesImportes.ts`), mémoire synchrone remplie avant le premier
+  écran (`programmes/perso/memoire.ts`), module générique
+  (`programmes/perso/module.ts`). Règles à ne pas « corriger » : une absence
+  n'est jamais 0 ; texte verbatim ; 12 semaines au plus ; aucune charge,
+  aucun RPE, aucune progression calculée ; le champ de charge s'ouvre VIDE
+  (l'historique n'est qu'un repère écrit) ; un identifiant inconnu ouvre
+  « Programme indisponible », jamais POWER 12 (`femmes8`, `null` et le
+  catalogue compilé gardent leur repli). Fichier d'exemple : Training 1
+  (`engine/perso/__fixtures__/training1.json`, identique à l'annexe B).
+  **Lot 5, la page** (`components/perso/`, famille `perso` du catalogue) :
+  le fichier est validé et montré AVANT d'être enregistré (suivi complet ou
+  « Suivi partiel : X exercices sur Y », « Ce que le document ne disait
+  pas ») ; une durée absente est demandée de 1 à 12 semaines, « Choisir »
+  sélectionné et bouton désactivé tant qu'il manque — jamais de valeur par
+  défaut. Archiver sort la version de la liste (section « Archivés ») ;
+  supprimer est refusé, avec la raison, tant qu'un cycle la suit. La famille
+  n'est jamais « À venir ». La restauration annonce les programmes importés
+  qu'elle remplace. `components/perso/importPerso.test.tsx`.
+  Reste le lot 6 (non-régression).
+- Le chrono de sprint est un **indicateur de transfert**, pas un objectif :
+  aucune séance ne fait sprinter.
+- Le programme ne propose **aucune quantité alimentaire** : il additionne et
+  affiche l'écart. Proposer un gramme serait une prescription.
+- **FEMMES 8 n'est pas un module, il a ses propres écrans.** L'App aiguille
+  tout cycle `femmes8` vers `#/femmes/*` (et renvoie au catalogue un
+  `#/femmes/*` sans cycle FEMMES). Ses séances vivent dans `femmesSeances`
+  (v23), son niveau et ses deux réponses de sécurité sur la ligne du cycle
+  (`cycle.femmes`). **La séance du jour est la première non faite**, pas une
+  date : une séance manquée n'est jamais sautée (`avancement.test.ts`).
+  `femmesSeances` n'est PAS dans `TABLES_PAR_CYCLE` (la montée v17 tournerait
+  sans elle) mais DOIT rester dans `TABLES_DU_CYCLE` de `repo.ts`, sinon un
+  cycle FEMMES avec des séances passe pour vierge et peut être supprimé.
+  **La séance FEMMES se présente comme celle de POWER** (demande de Guillaume) :
+  `SeanceFemmes.tsx` reprend `Session.module.css`, `WarmupSection`, `Stepper`
+  et la carte de circuit de POWER — le thème FEMMES repeint le tout. Chaque
+  tour se valide sur sa ligne ; `actual` = le plus petit des tours, `kg` = la
+  charge du dernier (`tours.ts`), pour que la progression des charges lise les
+  mêmes champs qu'avant. Le repos se lance en fin de tour, jamais entre deux
+  exercices d'un même tour.
+- **Le parcours FEMMES ne s'ouvre PAS comme celui de POWER.** POWER est
+  linéaire : chaque étape attend la précédente. FEMMES (4 cycles de 8
+  semaines, 4 transitions de 4) suit l'exception de Guillaume : **terminer un
+  cycle ouvre la transition qui le suit ET le cycle suivant**. Une transition
+  n'ouvre rien. Des tests de `acces.test.ts` figent cette règle.
+- **Les transitions seront AU CHOIX — décision de Guillaume, pas encore codée.**
+  À chaque étape « Transition » d'un parcours, l'utilisateur choisira UN cycle
+  de renfo parmi plusieurs, selon le point faible qu'il veut travailler (par
+  exemple dos, ischios, pecs-épaules, fessiers — toujours avec un gros travail
+  CORE). Rien n'est imposé. Deux règles tranchées :
+  1. **Chaque famille a ses propres renfos** (POWER, MASS, FEMMES) : un
+     « renfo fessiers » FEMMES n'est pas celui de POWER.
+  2. **Un même renfo peut se refaire** plusieurs fois dans le parcours (« si le
+     besoin de continuer à renforcer son dos se fait ressentir »).
+  Terminer n'importe lequel des renfos proposés compte comme la transition
+  faite. **Ne rien construire avant que Guillaume ait écrit les cycles** : pas
+  de lignes « À venir » aux noms provisoires. Les noms ci-dessus sont des
+  exemples, pas des titres.
+- **MASS : trois programmes, aucun verrou** (décisions de Guillaume, audit MASS
+  FORCE). L'ancien « MASS 4 » s'appelle MASS CONGESTION : seul son NOM a changé,
+  l'identifiant `mass4` et le contenu sportif sont strictement inchangés.
+  MASS 12 est retiré. L'ordre conseillé (hypertrophie → force → congestion) se
+  lit au catalogue — numéros + « Ordre conseillé, pas obligatoire » —, jamais
+  comme un déverrouillage (`ordreConseille`, pas `deblocage`).
+  Décisions déjà prises pour la suite, À NE PAS CODER sans « go » du lot :
+  1. **MASS FORCE ne démarre qu'après un combiné** (développé couché, tirage
+     vertical, squat, push press). Le combiné n'est jamais imposé à
+     CONGESTION.
+  2. **Ses références de force sont dans une table À PART** — FAIT (lot 2,
+     base v24, `referencesForce`) —, jamais dans `settings.oneRM` (qui pilote
+     tout le tableau de POWER). Une ligne = exercice, variante de matériel,
+     `direct` (1RM, 1 rep) ou `sous-maximal` (charge × reps BRUTES), date.
+     Ajout seul : `db/references.ts` n'a volontairement ni modification ni
+     suppression. Pas rattachée à un cycle (hors `TABLES_DU_CYCLE`) : supprimer
+     un cycle ne l'emporte jamais. `referenceCourante` (moteur) ne cherche que
+     le MÊME exercice et la MÊME variante : aucune conversion de matériel.
+     Des tests (`references.test.ts`, moteur et base) figent tout cela.
+  3. **Le sous-maximal enregistre ses données brutes** (charge × reps) sans
+     estimation : aucune formule n'est validée. Ne pas en inventer.
+     L'écran du combiné existe — FAIT (lot 3, `#/evaluation`,
+     `EvaluationScreen.tsx`), accessible depuis MASS FORCE au catalogue même
+     tant qu'il est « à venir ». Matériels en LISTE FERMÉE
+     (`data/combineMass.ts` : barre, Smith, haltères, poulie, machine
+     guidée ; décision de Guillaume) ; un matériel hors liste est refusé.
+     Chaque test ne propose que les matériels qui lui conviennent (push
+     press : Smith ou barre). Le test direct porte la phrase de Guillaume
+     (« pour les pratiquants expérimentés, dans des conditions appropriées »)
+     et AUCUN critère d'éligibilité inventé.
+  4. Les séries fractionnées ne s'implémentent pas avant validation, et
+     jamais via `secondReps` (qui veut dire « dégressive » à l'écran).
+  5. **MASS FORCE, lot 4a — FAIT, semaine type S1 seulement.** Source :
+     `programme-mass-force.md` (§1 tableau, §3 consignes/vigilance), relu case
+     par case par `massforce.test.ts`. Module `programmes/massforce/`
+     (`semaines: [1]`) : aucune charge, aucun %, aucun champ RPE (« RPE 8 »
+     est une consigne). Les 4 mouvements évalués portent « charge libre en
+     attendant ». Ouvert ensuite au catalogue (statut `disponible`, S1 seule).
+     Chaque option (matériel/variante) est un exercice à part (`mf-…`), donc
+     un historique à part ; le choix est fait une fois par cycle
+     (`CycleRow.massForce.choix`, passé aux séances par `ctx.choixCycle`).
+     **La porte** (`depart.ts`, `PorteMassForce`) : Aujourd'hui, Semaine et
+     les séances restent fermés tant que les choix ne sont pas confirmés ET
+     que chaque test a une référence AU MATÉRIEL CHOISI (une référence barre
+     n'ouvre pas un cycle Smith). Onglet Combiné = `EvaluationScreen` ;
+     Progrès et Nutrition = vue `a-venir`, sans contenu. Superset biceps :
+     3e rythme `transition` (repos court puis long), le chrono dit
+     « Transition → … ». Combiné : bench barre/Smith, plus d'haltères.
+     Reste à écrire par Guillaume : S2–S4.
+  6. **MASS FORCE, lot 5 — FAIT : fourchettes de charge S1.** Paramètres
+     propres à MASS FORCE dans `programmes/massforce/charges.ts`, rangés PAR
+     SEMAINE (seule la S1 existe ; une semaine absente n'hérite de rien) et
+     par exercice-matériel : bench et tirage vertical 75–82,5 % (les deux
+     matériels, chacun sur SON 1RM), squat 70–80 % **Smith seulement**, push
+     press AUCUNE. Seul un 1RM **mesuré** (test direct), même exercice et
+     même matériel, sert ; le plus récent ; un sous-maximal n'est jamais pris
+     pour un 1RM (aucune formule validée). Fourchette sans arrondi. Depuis
+     le lot 6, le champ kg s'ouvre sur la charge cible (décision de Guillaume). Affichage `chargeCible` dans `ExerciseCard` (absent
+     pour POWER et MASS CONGESTION). `charges.test.ts` fige tout cela.
+  7. **MASS FORCE, lot 6 — FAIT : progression S1 → S4** (§1 ter du .md).
+     Prescription IDENTIQUE sur 4 semaines (`SEMAINES_FORCE = [1,2,3,4]`) ;
+     seule la charge évolue, selon les séances réellement faites
+     (`programmes/massforce/progression.ts`, fonctions pures sur les séries
+     BRUTES du cycle — jamais `buildHistoryIndex`, dont `completed` veut dire
+     « au moins une série »). Fourchettes = couloir : départ au bas, +2,5 %
+     après réussite, plafond au haut, −5 % après deux échecs, suspendu au bas.
+     Tolérance de 2,5 points (sous-charge = même %). Sans RIR : deux
+     réussites au même % avant de monter. Ancre figée à la hausse, baisse
+     immédiate. Trois champs FACULTATIFS sur `SetRow` (`pctPrescrit`,
+     `kgCible`, `rirSaisi`), non indexés : pas de migration, l'export les
+     garde. **Ne jamais réutiliser `actualRpe` pour le RIR** : son sélecteur
+     est pré-rempli (une absence deviendrait une valeur) et les écrans
+     Progrès en font la moyenne. Complémentaires : `plage` (+2), `fixe` (RPE
+     prescrit, superset), `push-press` (RIR ≥ 2) — conseil sans kilos.
+     `progression.test.ts` rejoue les anomalies et trois profils.
+     Le bouton « Rep ratée » s'affiche sur TOUS les exercices MASS FORCE
+     (`signaleEchec`, posé par le module ; POWER : rôle `main` seulement,
+     MASS CONGESTION : jamais). Une série ratée = échec pour la progression.
+     `repRatee.test.tsx` fige les trois programmes.
+  8. **Le parcours d'accueil et l'écran Aujourd'hui dépendent du programme**
+     (régression signalée par Guillaume : MASS FORCE ouvrait le parcours de
+     POWER avec ses 1RM de septembre). `OnboardingScreen` ne montre les
+     maxima et la référence de saut que si `reglages.force` ; sinon, la date
+     seule (« Lundi de la semaine 1 »). Les textes hors séance (combine
+     initial, « N semaines bouclées », raccourci Nutrition) passent par
+     `programmes/textesCycle.ts`. POWER ne change pas d'un mot — des tests
+     (`OnboardingScreen.test.tsx`, `textesCycle.test.ts`) le figent.
+  9. **Identité MASS = maquettes sombres de Guillaume (14 novembre)**, pour
+     toute la famille (FORCE et CONGESTION) : `[data-theme='mass']` presque
+     noir et rouge, « // » rouge après les titres, semaine choisie rouge.
+     Elle REMPLACE la palette claire ardoise (décision antérieure, renversée
+     par Guillaume). Contrastes mesurés par `styles/themeMass.test.ts`.
+     **Photos d'en-tête MASS — FAIT** : quatre photos fournies par Guillaume
+     (885 px de large, pas agrandies), une par écran
+     (`HABILLAGE.mass.entetes` : athlète → Accueil, disque → Semaine, salle →
+     Séance, disques → Combiné). Sujet à droite, voile horizontal à gauche
+     sous le titre. **L'en-tête de l'Accueil MASS est PERMANENT** (décision
+     de Guillaume) : « MASS // » argent, nom exact du cycle (MASS FORCE ou
+     MASS CONGESTION, lu au catalogue), « Semaine X / Y ». L'état du jour
+     (« Ça commence bientôt », nom de séance, « Repos ») descend sous
+     l'en-tête, en petit (`.titreJour`). POWER et FEMMES : rien ne change —
+     `data/enteteMass.test.tsx` le fige.
+     **Écrans Semaine et Combiné MASS — FAIT**, transcrits des références
+     iPhone de Guillaume (mesurées : 1 px de référence = 1,336 px CSS pour
+     Semaine, × 0,473 pour le Combiné). Titres en vrai italique extra-gras
+     (famille `Barlow Mass` dans `fonts.css` : même fichier que l'italique
+     800 de FEMMES, zéro octet de plus) et en argent. Semaine : variante
+     `argent` de `ScreenHeader`, sans « // ». Combiné : « MASS FORCE » est
+     une ÉTIQUETTE dans le cycle (pas de bouton retour : on navigue par les
+     onglets), trois encadrés à icône (haltère ajoutée à `Icon.tsx`).
+     Écarts VOULUS aux références, à ne pas « corriger » : boutons, curseurs
+     et date gardent 48 px (`--tap`), « Enregistrer le test » reste.
+     `screens/combineMass.test.tsx` fige l'étiquette et la variante.
+     **Écran Séance MASS — FAIT** (référence × 0,473), pour FORCE et
+     CONGESTION. Tout le bloc « SÉANCE MASS » de `Session.module.css` est
+     préfixé `:global([data-theme='mass']) .ecranSeance` : ces classes sont
+     partagées avec la séance POWER, la séance FEMMES et le COMBINÉ MASS (une
+     première version les repeignait aussi). `screens/seanceMass.test.ts`
+     refuse tout sélecteur non confiné. Pas de trait sous le titre de séance ;
+     « DUR » (et toute intensité MASS) en bord rouge. Écarts voulus : curseurs
+     et bouton de fiche à 48 px, zone du retour qui mord de 12 px sur la
+     barre d'état, photo de fiche inchangée (pas de fichier fourni).
+     **Harmonisation de toute la famille MASS — FAIT** (lots B à E, audit
+     validé par Guillaume). Les valeurs validées vivent dans des jetons
+     `--mass-*` sur `:root` (`tokens.css`) : les réutiliser, n'en inventer
+     aucune. En-têtes sans photo : compacts, sans le décor de POWER, titre
+     argent. Cartes, boutons, champs, sélecteurs, panneaux de séance, barre
+     de repos : tous en jetons MASS. Décisions de Guillaume : le « // » reste
+     partout sauf sur Semaine ; le VERT reste pour « fait » (séance, série,
+     interrupteur, fin de repos) ; le premier lancement MASS n'a pas de
+     photo (le stade est à POWER). Chaque règle MASS d'un fichier partagé
+     avec POWER est sous `:global([data-theme='mass'])` — trois tests de
+     confinement (`enteteMassCss`, `confinementMass`, `seanceMass`) le
+     vérifient. Photo de Semaine calée à DROITE (à gauche, un iPhone de
+     430 px montrait une bande noire).
+     **Fiches de MASS FORCE — COMPLÈTES : 28 exercices sur 28.** Table
+     propre `programmes/massforce/fiches.ts` : 10 planches de MASS CONGESTION
+     au même geste et au même matériel, 2 rattachements décidés par
+     Guillaume (leg curl → leg curl allongé ; élévations frontales →
+     alternées), 16 planches générées par Guillaume pour MASS FORCE, fond
+     BLANC (décision de Guillaume pour toute la bibliothèque MASS), avatar
+     MASS. Jamais un `power12-*`. MASS CONGESTION garde sa table
+     (`mass4/fiches.ts`), inchangée. Les pièges de l'audit ont LEUR planche —
+     ne jamais leur rattacher la voisine : tirage horizontal large ≠ prise
+     serrée, push press ≠ développé militaire, incliné haltères ≠ incliné
+     Smith. Toute planche fournie se vérifie (geste, matériel, muscles,
+     cohérence avec la prescription) avant intégration : le curl et
+     l'extension triceps ont été refaits pour des muscles ou un tempo faux.
+     Le fond du bloc fiche (exercice sans fiche) de MASS FORCE est la salle
+     MASS (`massSalle`, `ambianceFicheDe`). `massforce/fiches.test.ts`.
+     **Bandeaux du 14 novembre — FAIT.** Sept images de Guillaume (3:1,
+     ramenées à 1200/640 px). POWER : Nutrition (`nutritionPower`), Combine
+     (`combinePower`, logo de chaussure effacé du fichier), Semaine
+     (`semainePower`) ; leur voile est allégé (règle `data-visuel` de
+     `ScreenHeader.module.css`), les autres en-têtes POWER ne changent pas.
+     MASS (famille, `HABILLAGE.mass.entetes`) : nutrition, progres, mesures,
+     reglages — aussi sur les onglets « à venir » de MASS FORCE. Jamais une
+     image d'une famille chez l'autre : `data/bandeaux.test.ts`. `ballon` et
+     `casque` supprimés (plus utilisés) ; `stade` reste (Aujourd'hui).
+     Séance et Combiné MASS : le contenu commence SOUS la barre d'état
+     (`--haut-ecran + 10px`), la photo reste dessous ; le rebond iOS est
+     bloqué sur `html[data-theme='mass']` (bande vide sous l'heure, vidéo de
+     Guillaume du 15 novembre).
+     **Retours du 15 novembre** (`ScreenHeader.module.css`, thème MASS) :
+     UN seul trait rouge sous les titres MASS, celui de Semaine et du
+     Combiné (court, qui s'éteint) — plus de ligne de sous-titre entre deux
+     traits ; le sous-titre reste dessous. Le voile du titre des bandeaux naît
+     en fondu dans les 40 px au-dessus du texte (sinon arête nette, « film
+     noir ») ; contraste des titres mesuré ≥ 3,5:1. Accueil : la photo de
+     l'athlète commence SOUS la barre d'état (sa tête est en haut du fichier,
+     elle passait sous l'heure). La Séance MASS n'a toujours pas de trait.
+- **FEMMES 8, phase 2 : la confirmée rejoint l'intermédiaire, et c'est voulu.**
+  La grille donne 4 tours fixes à la confirmée tandis que l'intermédiaire y
+  monte de 3 à 4 : en semaine 5 les deux séances sont identiques. Le
+  comportement a été montré à Guillaume avec son correctif (5 tours, comme la
+  phase 3) ; il a tranché pour 4. La phase 2 est une construction commune,
+  c'est la phase 3 qui sépare les niveaux — 3, 4 et 5 tours. Un test de
+  `niveaux.test.ts` fige cette décision : s'il tombe, c'est qu'un chiffre a
+  bougé par mégarde, pas qu'il faut « réparer » la grille.

@@ -1,0 +1,473 @@
+/*
+ * Le catalogue reprend les jetons de l'application : aucune couleur nouvelle.
+ * La seule distinction visuelle est celle qui compte — disponible ou non.
+ */
+
+.enteteFamille {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.nomFamille {
+  margin: 0;
+  font-family: var(--font-cond);
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
+.sousTitre {
+  color: var(--ink-3);
+  font-size: var(--fs-small);
+}
+
+.liste {
+  list-style: none;
+  margin: 14px 0 0;
+  padding: 0;
+}
+
+.ligne {
+  border-top: 1px solid var(--line);
+}
+
+.ligne:first-child {
+  border-top: none;
+}
+
+.titreLigne {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 12px 0;
+  border: none;
+  background: none;
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+}
+
+.nomDuree {
+  display: flex;
+  flex: 1;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: 10px;
+  min-width: 0;
+}
+
+.nom {
+  font-weight: 700;
+  font-size: 0.98rem;
+  white-space: nowrap;
+}
+
+.duree {
+  color: var(--ink-3);
+  font-size: var(--fs-small);
+  white-space: nowrap;
+}
+
+/*
+ * L'étiquette d'état. « À venir » reste en gris : seule la disponibilité
+ * mérite d'être signalée, et la signaler en vert éviterait de promettre.
+ */
+.etat {
+  padding: 3px 9px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  color: var(--ink-3);
+  font-size: 0.72rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.dispo {
+  border-color: color-mix(in srgb, var(--vert) 45%, transparent);
+  color: var(--vert);
+}
+
+/* Parcours : le numéro d'étape, et le badge d'accès sous la ligne. */
+.etape {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--surface-3);
+  color: var(--ink);
+  font-family: var(--font-cond);
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+
+.badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: -4px 0 10px 34px;
+  font-size: 0.78rem;
+  color: var(--ink-3);
+}
+
+.badgeOuvert {
+  color: var(--vert);
+}
+
+.details {
+  padding: 0 0 14px;
+}
+
+.resume {
+  margin: 0 0 10px;
+  color: var(--ink-2);
+  font-size: var(--fs-small);
+  line-height: 1.5;
+}
+
+.sousSection {
+  margin: 12px 0 6px;
+  font-family: var(--font-cond);
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+.puces {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--ink-2);
+  font-size: var(--fs-small);
+  line-height: 1.55;
+}
+
+/* Le matériel à prévoir : un onglet repliable, fermé par défaut. */
+.materielBloc {
+  margin-top: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.materielTete {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 0;
+  background: var(--surface-2);
+  color: var(--ink);
+  font-family: var(--font-cond);
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  text-align: left;
+  cursor: pointer;
+}
+
+.materielCompte {
+  flex: 1;
+  font-family: var(--font);
+  font-size: var(--fs-small);
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--ink-3);
+}
+
+.materielBloc .materiel {
+  padding: 8px;
+}
+
+/* Le matériel à prévoir : l'objet en gras, son usage, l'alternative. */
+.materiel {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.materiel li {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  font-size: var(--fs-small);
+  line-height: 1.45;
+  color: var(--ink-2);
+}
+
+.materiel b {
+  color: var(--ink);
+}
+
+.sinon {
+  color: var(--ink-3);
+  font-style: italic;
+}
+
+.action {
+  display: block;
+  width: 100%;
+  margin-top: 14px;
+  padding: 12px 16px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: var(--accent);
+  color: var(--ink-on-accent);
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.action:active {
+  background: var(--accent-deep);
+}
+
+.annuler {
+  display: block;
+  width: 100%;
+  margin-top: 8px;
+  padding: 11px 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--ink-2);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.confirme {
+  margin-top: 14px;
+  padding: 12px 14px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+}
+
+.confirme p {
+  margin: 0;
+  color: var(--ink-2);
+  font-size: var(--fs-small);
+  line-height: 1.5;
+}
+
+.boutons {
+  margin-top: 4px;
+}
+
+.rien {
+  margin: 10px 0 0;
+  color: var(--ink-3);
+  font-size: var(--fs-small);
+  font-style: italic;
+}
+
+/* ===================================================================== */
+/*  La refonte Dcross-fit : grandes bannières de famille                  */
+/* ===================================================================== */
+
+.titreEcran {
+  margin: 16px 0 14px;
+}
+
+.grandTitre {
+  margin: 0;
+  font-family: var(--font-cond);
+  font-size: clamp(1.7rem, 7.6vw, 2.1rem);
+  font-style: italic;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--ink);
+  text-transform: uppercase;
+}
+
+.sousTitreEcran {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 8px 0 0;
+  font-family: var(--font-cond);
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  color: var(--ink-3);
+  text-transform: uppercase;
+}
+
+.trait {
+  display: block;
+  width: 26px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--accent);
+  transform: skewX(-18deg);
+}
+
+.famille {
+  margin-bottom: 14px;
+  /* Ouverte depuis une tuile de l'accueil, la famille vient en haut de
+     l'écran : un peu d'air, et jamais sous la barre d'état de l'iPhone. */
+  scroll-margin-top: calc(env(safe-area-inset-top, 0px) + 14px);
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg, 18px);
+  background: var(--surface);
+}
+
+/*
+ * La bannière : photo à droite, texte à gauche, chevron au bout.
+ *
+ * Hauteur fixe et non dictée par le texte : trois bannières de hauteurs
+ * différentes donneraient une pile bancale, et c'est la première chose qu'on
+ * voit en ouvrant l'écran.
+ */
+.banniere {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 128px;
+  padding: 0;
+  border: 0;
+  background: none;
+  text-align: left;
+}
+
+.bannierePhoto {
+  position: absolute;
+  inset: 0;
+}
+
+.bannierePhoto img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 70% center;
+}
+
+.banniereVoile {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(
+      90deg,
+      rgb(var(--voile) / 97%) 10%,
+      rgb(var(--voile) / 55%) 62%,
+      rgb(var(--voile) / 10%) 100%
+    ),
+    linear-gradient(90deg, color-mix(in srgb, var(--teinte) 40%, transparent), transparent 80%);
+}
+
+.banniereTexte {
+  position: absolute;
+  top: 50%;
+  left: var(--pad);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  transform: translateY(-50%);
+}
+
+.banniereTexte .nomFamille {
+  font-family: var(--font-cond);
+  font-size: 2rem;
+  font-style: italic;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--ink);
+  text-transform: uppercase;
+}
+
+.banniereTexte .sousTitre {
+  font-size: var(--fs-small);
+  color: var(--ink-2);
+}
+
+.barres {
+  display: flex;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.barres i {
+  display: block;
+  width: 15px;
+  height: 7px;
+  border-radius: 1px;
+  background: var(--teinte, var(--accent));
+  transform: skewX(-24deg);
+}
+
+.barres i:nth-child(2) {
+  opacity: 0.75;
+}
+
+.barres i:nth-child(3) {
+  opacity: 0.5;
+}
+
+.banniereBadge {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--teinte, var(--accent));
+  color: var(--ink);
+  font-family: var(--font-cond);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.banniereChevron {
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  transform: translateY(-50%);
+  border-radius: 999px;
+  background: rgb(255 255 255 / 12%);
+  color: var(--ink);
+}
+
+.corpsFamille {
+  padding: 4px var(--pad) var(--pad);
+  border-top: 1px solid var(--line);
+}
+
+/* Même convention que le reste de l'écran : chaque bloc porte sa marge. */
+.titreEcran,
+.famille {
+  margin-left: var(--pad);
+  margin-right: var(--pad);
+}
+
+/* « Ordre conseillé, pas obligatoire » — au-dessus des programmes numérotés
+   d'une famille sans verrou (MASS). Discret : c'est un conseil. */
+.ordreConseille {
+  margin: 4px 0 0;
+  color: var(--ink-3);
+  font-size: var(--fs-small);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}

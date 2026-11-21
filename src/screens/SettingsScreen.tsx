@@ -1,0 +1,1128 @@
+import { useEffect, useRef, useState } from 'react';
+import { Stepper, stepValue } from '../components/Stepper';
+import {
+  BORNES,
+  CIBLES_NUTRITION_VIERGES,
+  ECART_TOLERE,
+  ecartKcal,
+  kcalDesMacros,
+  macrosValides,
+  type CiblesMacros,
+  type CiblesNutrition,
+} from '../data/ciblesNutrition';
+import type { DayKind } from '../data/types';
+import {
+  genererFiche,
+  lireFiche,
+  patchDeFiche,
+  MARQUEUR,
+  type LectureFiche,
+} from '../engine/fiche';
+import { FOOD_LIBRARY } from '../data/foodLibrary';
+import { bandePoids } from '../engine/ciblePoids';
+import { poseMaximum } from '../engine/maxima';
+import { dateFor, humanDate, isMonday, nearestMonday } from '../engine/calendar';
+import { fr } from '../engine/format';
+import { isWakeLockSupported } from '../timer/wakeLock';
+import {
+  downloadExport,
+  downloadPhotoExport,
+  importAll,
+  importPhotos,
+  parseAnyExport,
+  resetPhotos,
+  type AnyExportFile,
+} from '../db/export';
+import { resumeImport } from '../db/resumeImport';
+import { formatBytes } from '../media/photo';
+import {
+  allMeasurements,
+  getSettingsRow,
+  photoUsage,
+  saveSettings,
+  type PhotoUsage,
+} from '../db/repo';
+import type { SettingsRow } from '../db/db';
+import { ScreenHeader } from '../components/ScreenHeader';
+import { enteteDe } from '../data/famillesVisuel';
+import type { ModuleProgramme } from '../programmes/types';
+import styles from './Screens.module.css';
+
+/*
+ * Les quatre lifts dont le programme teste le maximum.
+ *
+ * AUCUNE valeur de départ. Cette liste en portait quatre — squat 140, bench
+ * 120, deadlift 130, tractions +42 — qui étaient les ESTIMATIONS de Guillaume
+ * d'avant son combine, celles que le programme qualifie lui-même de fausses
+ * (le squat valait 110, le deadlift 140).
+ *
+ * Elles ne servaient pas de simple décor : un champ vide affichait ce chiffre
+ * et le readiness ROUGE prescrit 65 % du 1RM. Un débutant qui squatte 70 kg se
+ * voyait donc proposer 3 × 3 à 91 kg, soit 130 % de son maximum réel, sans
+ * avoir jamais rien saisi.
+ *
+ * Un maximum inconnu vaut `null`, jamais un nombre. Un zéro serait pire
+ * encore : c'est une performance, et le moteur le traiterait comme telle.
+ */
+const ONE_RM_FIELDS = [
+  { id: 'back-squat', label: 'Back Squat' },
+  { id: 'bench-press', label: 'Bench Press' },
+  { id: 'deadlift', label: 'Deadlift' },
+  { id: 'weighted-pullup', label: 'Tractions lestées' },
+  { id: 'push-press', label: 'Push Press' },
+] as const;
+
+type Annonce = { text: string; kind: 'ok' | 'erreur' };
+
+/**
+ * Le message à montrer APRÈS un rechargement de l'écran.
+ *
+ * `onChanged` fait remonter l'écran (sa clé change) : un message posé juste
+ * avant disparaissait avec l'ancienne instance. « Import réussi » et « Photos
+ * effacées » n'apparaissaient donc jamais (P1-D). Le nouvel écran le reprend.
+ */
+let annonceEnAttente: Annonce | null = null;
+
+export function SettingsScreen({
+  onChanged,
+  programme,
+}: {
+  onChanged: () => void;
+  /**
+   * Le programme du cycle en cours.
+   *
+   * Cet écran est le seul que deux programmes partagent vraiment : la date de
+   * début, le poids de corps, la sauvegarde et la remise à zéro leur sont
+   * communes. Tout le reste était écrit pour POWER 12 et se voyait sous MASS
+   * — photo de football américain, « Programme 12 semaines », et un récapitulatif
+   * annonçant squat, deadlift et bench à un programme qui n'en contient aucun.
+   *
+   * Les valeurs masquées ne sont jamais effacées : elles restent en base et
+   * réapparaissent dès qu'un cycle POWER redevient actif.
+   */
+  programme: ModuleProgramme;
+}) {
+  const [row, setRow] = useState<SettingsRow | null>(null);
+  /**
+   * Moyenne des 3 dernières pesées du journal Nutrition — exactement ce que
+   * §12 demande ici (« moyenne de 3 matinées, à jeun »). On ne la recopie pas
+   * d'office : le champ ci-dessous est le relevé officiel du combine, c'est
+   * Guillaume qui décide quand le figer.
+   */
+  const [last3, setLast3] = useState<number | null>(null);
+  const [usage, setUsage] = useState<PhotoUsage | null>(null);
+  const [confirmPhotos, setConfirmPhotos] = useState(false);
+  const [aRestaurer, setARestaurer] = useState<AnyExportFile | null>(null);
+  const [message, setMessage] = useState<{
+    text: string;
+    kind: 'ok' | 'erreur';
+  } | null>(() => {
+    const a = annonceEnAttente;
+    annonceEnAttente = null;
+    return a;
+  });
+  const fileInput = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    void (async () => {
+      setRow(await getSettingsRow());
+      const weights = (await allMeasurements())
+        .filter((m) => m.weightKg !== null)
+        .slice(-3)
+        .map((m) => m.weightKg!);
+      setLast3(
+        weights.length === 3
+          ? Math.round((weights.reduce((a, b) => a + b, 0) / 3) * 10) / 10
+          : null,
+      );
+      setUsage(await photoUsage());
+    })();
+  }, []);
+
+  if (!row) return <div className={styles.loading}>Chargement…</div>;
+
+  async function patch(p: Partial<SettingsRow>) {
+    const next = await saveSettings(p);
+    setRow(next);
+    onChanged();
+  }
+
+  /**
+   * Un seul bouton d'import pour les deux fichiers : celui des données et celui
+   * des photos. L'appli reconnaît lequel on lui donne, ce qui évite de choisir
+   * le mauvais bouton et d'écraser ce qu'on voulait garder.
+   */
+  /** Annonce un résultat, puis recharge l'application (l'écran remonte). */
+  function annoncerPuisRecharger(a: Annonce) {
+    annonceEnAttente = a;
+    setMessage(a);
+    onChanged();
+  }
+
+  /**
+   * Choisir un fichier ne remplace plus rien : il est lu, puis l'écran dit ce
+   * qu'il contient et ce qu'il remplacera, et attend une confirmation (P1-D).
+   */
+  async function handleImport(file: File) {
+    try {
+      setMessage(null);
+      setARestaurer(parseAnyExport(await file.text()));
+    } catch (e) {
+      setARestaurer(null);
+      setMessage({
+        text: e instanceof Error ? e.message : 'Import impossible.',
+        kind: 'erreur',
+      });
+    }
+  }
+
+  /** La restauration elle-même, une fois confirmée. */
+  async function restaurer(parsed: AnyExportFile) {
+    try {
+      if (parsed.kind === 'photos') {
+        const report = await importPhotos(parsed.file);
+        setUsage(await photoUsage());
+        setARestaurer(null);
+        annoncerPuisRecharger({
+          text: `Photos importées : ${report.progressPhotos} de suivi, ${report.exerciseMedia} d’exercice, ${report.exerciseReference} fiche${report.exerciseReference > 1 ? 's' : ''} technique${report.exerciseReference > 1 ? 's' : ''}. L’historique d’entraînement n’a pas été touché.`,
+          kind: 'ok',
+        });
+        return;
+      }
+      const report = await importAll(parsed.file);
+      setRow(await getSettingsRow());
+      setARestaurer(null);
+      annoncerPuisRecharger({
+        text: `Import réussi : ${report.sets} séries, ${report.sessions} séances, ${report.readiness} readiness, ${report.combines} combines, ${report.measurements} pesées, ${report.painLog} notes de douleur, ${report.extraFoods} aliments ajoutés, ${report.notes + report.exerciseNotes} remarques, ${report.sessionExercises} exercices de séance, ${report.mealLog} repas cochés, ${report.customFoods + report.foodOverrides} aliments personnels. Les photos ne sont pas dans ce fichier, elles sont restées en place.`,
+        kind: 'ok',
+      });
+    } catch (e) {
+      setARestaurer(null);
+      setMessage({
+        text: `${e instanceof Error ? e.message : 'Import impossible.'} Tes données n’ont pas été modifiées.`,
+        kind: 'erreur',
+      });
+    }
+  }
+
+  const start = row.startDate;
+  const ancreValide = start !== '' && isMonday(start);
+  const bande = bandePoids(row.ciblePoidsBasKg, row.ciblePoidsHautKg);
+  const hintCible =
+    row.ciblePoidsBasKg === null && row.ciblePoidsHautKg === null
+      ? 'Aucun objectif : le graphique trace ta courbe sans bande.'
+      : bande === null
+        ? row.ciblePoidsBasKg !== null && row.ciblePoidsHautKg !== null
+          ? 'L’objectif bas doit être le plus petit des deux.'
+          : 'Renseigne les deux bornes pour voir la bande.'
+        : `Bande affichée de ${fr(bande.min)} à ${fr(bande.max)} kg. Vide les deux champs pour la retirer.`;
+  const today = new Date().toISOString().slice(0, 10);
+
+  /*
+   * Le programme commence-t-il par une semaine 0 ?
+   *
+   * C'est ce qui distingue un combine initial d'un simple premier lundi, et
+   * c'est déduit de la structure plutôt que déclaré : un programme qui porte
+   * une semaine 0 a forcément quelque chose à y faire.
+   */
+  const avecCombine = programme.semaines.includes(0);
+  const derniereSemaine = programme.semaines[programme.semaines.length - 1] ?? 1;
+  const joursDeFin = programme.joursDeLaSemaine(derniereSemaine);
+  const dernierJour = joursDeFin[joursDeFin.length - 1] ?? 0;
+
+  /* La photo du programme (POWER : `athlete`), sinon celle de sa famille (MASS). */
+  const bandeauReglages = programme.reglages.visuel ?? enteteDe(programme.id, 'reglages');
+
+  return (
+    <div className={styles.screen}>
+      <ScreenHeader
+        eyebrow={programme.reglages.eyebrow}
+        title="Réglages"
+        subtitle="Tout reste sur ce téléphone"
+        {...(bandeauReglages === undefined ? {} : { visuel: bandeauReglages })}
+      >
+        <p className={styles.lead}>Tout est stocké sur ce téléphone. Rien ne part sur internet.</p>
+      </ScreenHeader>
+
+      {message && (
+        <p
+          className={`${styles.alert} ${message.kind === 'ok' ? styles.alertVert : styles.alertRouge}`}
+        >
+          {message.text}
+        </p>
+      )}
+
+      {/* ------------------------------------------------ date de début -- */}
+      <section className={styles.card}>
+        <h2 className={styles.cardTitle}>Date de début</h2>
+        <p className={styles.cardSub}>
+          {avecCombine ? (
+            <>
+              Le <b>lundi</b> du combine initial. Tout le calendrier en découle : le combine tient
+              sur six jours, puis la semaine 1 démarre le lundi suivant.
+            </>
+          ) : (
+            <>
+              Le <b>lundi</b> de la semaine 1. Tout le calendrier en découle.
+            </>
+          )}
+        </p>
+        <div className={styles.field}>
+          <label className={styles.label} htmlFor="start-date">
+            {avecCombine ? 'Lundi du combine initial' : 'Lundi de la semaine 1'}
+          </label>
+          <input
+            id="start-date"
+            className={styles.input}
+            type="date"
+            value={start}
+            onChange={(e) => void patch({ startDate: e.target.value })}
+          />
+          {start !== '' && !ancreValide && (
+            <>
+              <p className={`${styles.alert} ${styles.alertRouge}`} style={{ margin: '10px 0 0' }}>
+                <b>{humanDate(start)} n’est pas un lundi.</b> Tout le calendrier est calé sur le
+                lundi {avecCombine ? 'du combine' : 'de la semaine 1'} : avec cette date, toutes les
+                séances tombent le mauvais jour de la semaine.
+              </p>
+              <button
+                type="button"
+                className={styles.secondary}
+                style={{ width: '100%', margin: '10px 0 0' }}
+                onClick={() => void patch({ startDate: nearestMonday(start) })}
+              >
+                Corriger : {humanDate(nearestMonday(start))}
+              </button>
+            </>
+          )}
+          {ancreValide && avecCombine && (
+            <p className={styles.fieldHint}>
+              Combine : squat le {humanDate(dateFor(start, 0, 0))}, tractions lestées le{' '}
+              {humanDate(dateFor(start, 0, 1))}, deadlift le {humanDate(dateFor(start, 0, 3))},
+              bench le {humanDate(dateFor(start, 0, 4))}, tractions max le{' '}
+              {humanDate(dateFor(start, 0, 5))}. Semaine 1 le {humanDate(dateFor(start, 1, 0))},
+              dernière séance le {humanDate(dateFor(start, 12, 6))}.
+            </p>
+          )}
+          {ancreValide && !avecCombine && (
+            <p className={styles.fieldHint}>
+              Semaine 1 le {humanDate(dateFor(start, 1, 0, programme))}, dernière séance le{' '}
+              {humanDate(dateFor(start, derniereSemaine, dernierJour, programme))}.
+            </p>
+          )}
+        </div>
+      </section>
+
+      {/* ------------------------------------------------ poids de corps -- */}
+      <section className={styles.card}>
+        <h2 className={styles.cardTitle}>Poids de corps</h2>
+        <p className={styles.cardSub}>
+          {programme.reglages.refPoids === null ? '' : `${programme.reglages.refPoids} — `}
+          <b>moyenne de 3 matinées, à jeun</b>. C’est un relevé de maison, pas une mesure de séance
+          {avecCombine ? ' : il ne figure plus dans le flux du combine.' : '.'} Saisis-le ici quand
+          tu veux, la veille ou le matin même.
+        </p>
+        <div className={styles.field}>
+          <Stepper
+            label="Poids de corps"
+            value={row.bodyweightKg}
+            step={0.5}
+            min={40}
+            max={160}
+            unit="kg"
+            tone="accent"
+            onStep={(d) =>
+              void patch({
+                bodyweightKg: stepValue(row.bodyweightKg, d, 40, 160),
+                bodyweightDate: today,
+              })
+            }
+            onCommit={(v) =>
+              void patch({
+                bodyweightKg: v,
+                bodyweightDate: v === null ? '' : today,
+              })
+            }
+          />
+          <p className={styles.fieldHint}>
+            {row.bodyweightKg === null
+              ? 'Pas encore renseigné. Appuie sur la valeur pour taper 78,3 au clavier.'
+              : `Relevé ${row.bodyweightDate ? `le ${humanDate(row.bodyweightDate)}` : 'sans date'}. Appuie sur la valeur pour la saisir au clavier, décimales comprises.`}
+          </p>
+          {last3 !== null && last3 !== row.bodyweightKg && (
+            <button
+              type="button"
+              className={styles.secondary}
+              style={{ width: '100%', margin: '10px 0 0' }}
+              onClick={() => void patch({ bodyweightKg: last3, bodyweightDate: today })}
+            >
+              Reprendre {fr(last3)} kg — moyenne de tes 3 dernières pesées
+            </button>
+          )}
+        </div>
+      </section>
+
+      {/* ------------------------------------------ objectif de poids --- */}
+      <section className={styles.card}>
+        <h2 className={styles.cardTitle}>Objectif de poids</h2>
+        <p className={styles.cardSub}>
+          <b>Facultatif, et vide par défaut.</b> Le programme n’impose aucun poids de corps : un
+          objectif est personnel, il dépend de ta taille, de ton poste et de ce que tu cherches.
+          Renseigne-le si tu veux voir la bande sur le graphique de l’onglet Progrès.
+        </p>
+        <div className={styles.field}>
+          <Stepper
+            label="Objectif bas"
+            value={row.ciblePoidsBasKg}
+            step={0.5}
+            min={40}
+            max={160}
+            unit="kg"
+            emptyLabel="aucun"
+            onStep={(d) =>
+              void patch({ ciblePoidsBasKg: stepValue(row.ciblePoidsBasKg, d, 40, 160) })
+            }
+            onCommit={(v) => void patch({ ciblePoidsBasKg: v })}
+          />
+        </div>
+        <div className={styles.field}>
+          <Stepper
+            label="Objectif haut"
+            value={row.ciblePoidsHautKg}
+            step={0.5}
+            min={40}
+            max={160}
+            unit="kg"
+            emptyLabel="aucun"
+            onStep={(d) =>
+              void patch({ ciblePoidsHautKg: stepValue(row.ciblePoidsHautKg, d, 40, 160) })
+            }
+            onCommit={(v) => void patch({ ciblePoidsHautKg: v })}
+          />
+          <p className={styles.fieldHint}>{hintCible}</p>
+        </div>
+      </section>
+
+      {/* --------------------------------------------- référence de saut -- */}
+      {programme.reglages.force && (
+        <section className={styles.card}>
+          <h2 className={styles.cardTitle}>Référence broad jump</h2>
+          <p className={styles.cardSub}>
+            Meilleur des 3 essais du combine initial. Elle est figée : c’est elle qui décide du feu
+            tricolore avant chaque séance jambes.
+          </p>
+          <div className={styles.field}>
+            <Stepper
+              label="Référence"
+              value={row.broadJumpBaselineCm}
+              step={5}
+              min={100}
+              max={400}
+              unit="cm"
+              tone="accent"
+              onStep={(d) =>
+                void patch({
+                  broadJumpBaselineCm: stepValue(row.broadJumpBaselineCm, d, 100, 400),
+                })
+              }
+              onCommit={(v) => void patch({ broadJumpBaselineCm: v })}
+            />
+            <p className={styles.fieldHint}>
+              {row.broadJumpBaselineCm === null
+                ? 'Non définie : aucun verdict de readiness ne sera calculé.'
+                : `Orange en dessous de ${fr(Math.round(row.broadJumpBaselineCm * 0.98 * 10) / 10)} cm, rouge en dessous de ${fr(Math.round(row.broadJumpBaselineCm * 0.95 * 10) / 10)} cm.`}
+            </p>
+          </div>
+        </section>
+      )}
+
+      {/* ------------------------------------------------------- 1RM ----- */}
+      {programme.reglages.force && (
+        <section className={styles.card}>
+          <h2 className={styles.cardTitle}>1RM testés</h2>
+          <p className={styles.cardSub}>
+            Ils servent aux jours de <b>readiness rouge</b> (65 % du 1RM) et te donnent un repère de
+            progression. Laisse vide ce que tu n’as pas mesuré : l’appli dira « à mesurer » plutôt
+            que d’inventer un chiffre.
+          </p>
+          {ONE_RM_FIELDS.map((f) => (
+            <div key={f.id} className={styles.field}>
+              <Stepper
+                label={f.label}
+                value={row.oneRM[f.id] ?? null}
+                step={2.5}
+                min={0}
+                max={300}
+                unit="kg"
+                emptyLabel="à mesurer"
+                onStep={(d) =>
+                  void patch({
+                    oneRM: poseMaximum(
+                      row.oneRM,
+                      f.id,
+                      stepValue(row.oneRM[f.id] ?? null, d, 0, 300),
+                    ),
+                  })
+                }
+                onCommit={(v) => void patch({ oneRM: poseMaximum(row.oneRM, f.id, v) })}
+              />
+            </div>
+          ))}
+        </section>
+      )}
+
+      {/* ---------------------------------------------------- alertes ---- */}
+      <section className={styles.card}>
+        <h2 className={styles.cardTitle}>Fin de repos</h2>
+        <button
+          type="button"
+          className={styles.toggle}
+          onClick={() => void patch({ soundEnabled: !row.soundEnabled })}
+          aria-pressed={row.soundEnabled}
+        >
+          Son
+          <span className={`${styles.switch} ${row.soundEnabled ? styles.switchOn : ''}`}>
+            {row.soundEnabled ? 'activé' : 'coupé'}
+          </span>
+        </button>
+        <button
+          type="button"
+          className={styles.toggle}
+          onClick={() => void patch({ vibrationEnabled: !row.vibrationEnabled })}
+          aria-pressed={row.vibrationEnabled}
+        >
+          Vibration
+          <span className={`${styles.switch} ${row.vibrationEnabled ? styles.switchOn : ''}`}>
+            {row.vibrationEnabled ? 'activée' : 'coupée'}
+          </span>
+        </button>
+        <p className={styles.fieldHint}>
+          Sur iPhone, Safari ne permet pas la vibration : l’alerte sera le son et le passage de la
+          barre au vert. Maintien de l’écran pendant le repos :{' '}
+          <b>{isWakeLockSupported() ? 'disponible' : 'indisponible sur ce navigateur'}</b>.
+        </p>
+      </section>
+
+      {/* ----------------------------------------------- export / import -- */}
+      <section className={styles.card}>
+        <h2 className={styles.cardTitle}>Sauvegarde</h2>
+        <p className={styles.cardSub}>
+          Un fichier JSON contenant tout ton historique. Si le téléphone casse, c’est ce qui te
+          permet de repartir sans rien perdre.
+        </p>
+        <button
+          type="button"
+          className={styles.secondary}
+          style={{ width: '100%', margin: '12px 0 0' }}
+          onClick={() => void downloadExport()}
+        >
+          Exporter mes données
+        </button>
+        <button
+          type="button"
+          className={styles.secondary}
+          style={{ width: '100%', margin: '10px 0 0' }}
+          onClick={() => fileInput.current?.click()}
+        >
+          Importer un fichier
+        </button>
+        <input
+          ref={fileInput}
+          type="file"
+          accept="application/json,.json"
+          className="visually-hidden"
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            if (f) void handleImport(f);
+            e.target.value = '';
+          }}
+        />
+        <p className={styles.fieldHint}>
+          L’import <b>remplace</b> tout ce qui est enregistré. Fusionner deux historiques créerait
+          des séries en double et fausserait les règles de progression. Le même bouton accepte les
+          deux fichiers : l’appli reconnaît lequel tu lui donnes.
+        </p>
+        {aRestaurer !== null &&
+          (() => {
+            const r = resumeImport(aRestaurer);
+            return (
+              <div role="alertdialog" aria-label="Confirmer la restauration">
+                <p className={styles.fieldHint}>{r.contenu}</p>
+                <p className={styles.fieldHint} style={{ color: 'var(--rouge)', fontWeight: 700 }}>
+                  {r.remplace} Irréversible.
+                </p>
+                <p className={styles.fieldHint}>{r.garde}</p>
+                <button
+                  type="button"
+                  className={styles.secondary}
+                  style={{ width: '100%', margin: '10px 0 0' }}
+                  onClick={() =>
+                    void (aRestaurer.kind === 'photos' ? downloadPhotoExport() : downloadExport())
+                  }
+                >
+                  {aRestaurer.kind === 'photos'
+                    ? 'Exporter d’abord mes photos actuelles'
+                    : 'Exporter d’abord mes données actuelles'}
+                </button>
+                <button
+                  type="button"
+                  className={styles.secondary}
+                  style={{
+                    width: '100%',
+                    margin: '10px 0 0',
+                    background: 'var(--rouge)',
+                    color: 'var(--ink-on-accent)',
+                  }}
+                  onClick={() => void restaurer(aRestaurer)}
+                >
+                  {r.bouton}
+                </button>
+                <button
+                  type="button"
+                  className={styles.secondary}
+                  style={{ width: '100%', margin: '10px 0 0' }}
+                  onClick={() => setARestaurer(null)}
+                >
+                  Annuler
+                </button>
+              </div>
+            );
+          })()}
+      </section>
+
+      {/* --------------------------------------------- sauvegarde photos -- */}
+      <section className={styles.card}>
+        <h2 className={styles.cardTitle}>Sauvegarde des photos</h2>
+        <p className={styles.cardSub}>
+          Fichier séparé, et volontairement. Les photos pèsent mille fois plus que le reste : les
+          mettre dans la sauvegarde quotidienne la rendrait si lourde que tu ne la ferais plus, et
+          c’est elle qui protège tes douze semaines de séries.
+        </p>
+        {usage && (
+          <p className={styles.fieldHint}>
+            {usage.count === 0
+              ? 'Aucune photo enregistrée pour l’instant.'
+              : `${usage.count} photo${usage.count > 1 ? 's' : ''} · ${formatBytes(usage.bytes)}${
+                  usage.quotaBytes !== null
+                    ? ` · place accordée par le navigateur : ${formatBytes(usage.quotaBytes)}`
+                    : ''
+                }`}
+          </p>
+        )}
+        <button
+          type="button"
+          className={styles.secondary}
+          style={{ width: '100%', margin: '12px 0 0' }}
+          disabled={!usage || usage.count === 0}
+          onClick={() =>
+            void (async () => {
+              const r = await downloadPhotoExport();
+              setMessage({
+                text: `${r.count} photo${r.count > 1 ? 's' : ''} exportée${r.count > 1 ? 's' : ''} — ${formatBytes(r.bytes)}. Range ce fichier ailleurs que sur le téléphone.`,
+                kind: 'ok',
+              });
+            })()
+          }
+        >
+          Exporter mes photos
+        </button>
+        <p className={styles.fieldHint}>
+          iOS peut vider le stockage d’une application web quand la place manque sur le téléphone.
+          C’est la raison pour laquelle l’appli ne garde aucune vidéo — et la raison d’exporter les
+          photos de temps en temps.
+        </p>
+        {usage && usage.count > 0 && (
+          <>
+            {!confirmPhotos ? (
+              <button
+                type="button"
+                className={styles.secondary}
+                style={{
+                  width: '100%',
+                  margin: '10px 0 0',
+                  color: 'var(--rouge)',
+                }}
+                onClick={() => setConfirmPhotos(true)}
+              >
+                Effacer toutes les photos
+              </button>
+            ) : (
+              <>
+                <p className={styles.fieldHint} style={{ color: 'var(--rouge)' }}>
+                  Irréversible. Ton historique d’entraînement, lui, n’est pas touché.
+                </p>
+                <button
+                  type="button"
+                  className={styles.secondary}
+                  style={{
+                    width: '100%',
+                    margin: '10px 0 0',
+                    background: 'var(--rouge)',
+                    color: 'var(--ink-on-accent)',
+                  }}
+                  onClick={() =>
+                    void (async () => {
+                      await resetPhotos();
+                      setUsage(await photoUsage());
+                      setConfirmPhotos(false);
+                      annoncerPuisRecharger({ text: 'Photos effacées.', kind: 'ok' });
+                    })()
+                  }
+                >
+                  Oui, effacer les photos
+                </button>
+                <button
+                  type="button"
+                  className={styles.secondary}
+                  style={{ width: '100%', margin: '10px 0 0' }}
+                  onClick={() => setConfirmPhotos(false)}
+                >
+                  Annuler
+                </button>
+              </>
+            )}
+          </>
+        )}
+      </section>
+
+      {/* ------------------------------------------- plan nutritionnel -- */}
+      <section className={styles.card}>
+        <h2 className={styles.cardTitle}>Plan nutritionnel</h2>
+        <button
+          type="button"
+          className={styles.toggle}
+          onClick={() => void patch({ legacyNutritionPlan: !row.legacyNutritionPlan })}
+          aria-pressed={row.legacyNutritionPlan}
+        >
+          Afficher mon plan
+          <span className={`${styles.switch} ${row.legacyNutritionPlan ? styles.switchOn : ''}`}>
+            {row.legacyNutritionPlan ? 'affiché' : 'masqué'}
+          </span>
+        </button>
+        <p className={styles.fieldHint}>
+          Coupé, l’onglet Nutrition ne garde que la pesée du matin et tes cibles si tu en as posé.
+          Rien n’est effacé — tes pesées, tes repas cochés et tes aliments restent en base et
+          reviennent tels quels en le rallumant.
+        </p>
+      </section>
+
+      {/* ------------------------------------------------- mes cibles ---- */}
+      <section className={styles.card}>
+        <h2 className={styles.cardTitle}>Mes cibles nutritionnelles</h2>
+        <p className={styles.cardSub}>
+          <b>Facultatif, et vide par défaut.</b> MAJK ne décide pas combien tu dois manger. Si tu as
+          des chiffres — d’un diététicien, d’un coach, ou les tiens — pose-les ici : l’onglet
+          Nutrition affichera tes barres de macros et l’écart du jour.
+        </p>
+        {row.legacyNutritionPlan && (
+          <p className={styles.fieldHint}>
+            {/*
+              Dire pourquoi ces champs ne servent à rien en ce moment vaut
+              mieux que de les griser sans un mot : quelqu'un qui les
+              remplirait sans comprendre croirait l'écran cassé.
+            */}
+            Ton plan nutritionnel est affiché : ce sont ses repas qui font foi, et la cible du jour
+            vient de leur somme. Ce que tu poses ici est conservé, mais ne sera utilisé que si tu
+            masques le plan — carte <b>Plan nutritionnel</b>, juste au-dessus.
+          </p>
+        )}
+        {(['train', 'rest'] as const).map((kind) => (
+          <CiblesDuJour
+            key={kind}
+            kind={kind}
+            valeurs={(row.ciblesNutrition ?? CIBLES_NUTRITION_VIERGES)[kind]}
+            onChange={(suivantes) =>
+              void patch({
+                ciblesNutrition: {
+                  ...(row.ciblesNutrition ?? CIBLES_NUTRITION_VIERGES),
+                  [kind]: suivantes,
+                } as CiblesNutrition,
+              })
+            }
+          />
+        ))}
+        {row.ciblesNutrition !== null && (
+          <button
+            type="button"
+            className={styles.secondary}
+            style={{ width: '100%', margin: '12px 0 0' }}
+            onClick={() => void patch({ ciblesNutrition: null })}
+          >
+            Effacer mes cibles
+          </button>
+        )}
+      </section>
+
+      {/* ----------------------------------------------------- la fiche -- */}
+      <CarteFiche row={row} patch={patch} />
+      <CarteFichePour />
+
+      <section className={styles.card}>
+        <h2 className={styles.cardTitle}>Gestion des données</h2>
+        <p className={styles.cardSub}>
+          La suppression globale de l’historique est désactivée pour protéger les séances et les
+          performances de tous tes programmes. Pour retirer un cycle, utilise la rubrique Parcours.
+        </p>
+      </section>
+    </div>
+  );
+}
+
+/**
+ * Les quatre nombres d'une journée.
+ *
+ * Chaque champ s'enregistre seul, dès qu'il change : une journée à moitié
+ * remplie survit à un changement d'écran, et on peut poser ses chiffres en
+ * deux fois. Tant que les quatre n'y sont pas, l'encart le dit — sans rien
+ * corriger sous les doigts.
+ */
+function CiblesDuJour({
+  kind,
+  valeurs,
+  onChange,
+}: {
+  kind: DayKind;
+  valeurs: CiblesMacros;
+  onChange: (suivantes: CiblesMacros) => void;
+}) {
+  const titre = kind === 'train' ? 'Jour d’entraînement' : 'Jour de repos';
+  const pose = (champ: keyof CiblesMacros, v: number | null) =>
+    onChange({ ...valeurs, [champ]: v });
+
+  const champs = [
+    { cle: 'kcal' as const, label: 'Calories', unite: 'kcal', pas: 50, bornes: BORNES.kcal },
+    { cle: 'proteinG' as const, label: 'Protéines', unite: 'g', pas: 5, bornes: BORNES.proteinG },
+    { cle: 'carbsG' as const, label: 'Glucides', unite: 'g', pas: 5, bornes: BORNES.carbsG },
+    { cle: 'fatG' as const, label: 'Lipides', unite: 'g', pas: 5, bornes: BORNES.fatG },
+  ];
+
+  const completes = macrosValides(valeurs);
+  const manquants = champs.filter((c) => valeurs[c.cle] === null).length;
+  const ecart = completes ? ecartKcal(valeurs) : 0;
+
+  return (
+    <>
+      <h3 className={styles.sectionTitle}>{titre}</h3>
+      {champs.map((c) => (
+        <div key={c.cle} className={styles.field}>
+          <Stepper
+            label={`${c.label} · ${c.unite}`}
+            value={valeurs[c.cle]}
+            step={c.pas}
+            min={c.bornes.min}
+            max={c.bornes.max}
+            emptyLabel="à poser"
+            onStep={(d) => pose(c.cle, stepValue(valeurs[c.cle], d, c.bornes.min, c.bornes.max))}
+            onCommit={(v) => pose(c.cle, v)}
+          />
+        </div>
+      ))}
+      {manquants > 0 && (
+        <p className={styles.fieldHint}>
+          {manquants === 4
+            ? 'Rien de posé pour cette journée.'
+            : `Il manque ${String(manquants)} valeur${manquants > 1 ? 's' : ''} : les quatre sont nécessaires pour afficher une cible.`}
+        </p>
+      )}
+      {completes && ecart > ECART_TOLERE && (
+        <p className={styles.fieldHint} style={{ color: 'var(--accent-ink)' }}>
+          {/*
+            On SIGNALE l'écart, on ne réécrit rien. Ces chiffres peuvent venir
+            d'un diététicien et ne pas tomber juste à l'unité ; les corriger
+            sous les doigts serait pire que de les laisser.
+          */}
+          Tes macros pèsent {kcalDesMacros(valeurs).toLocaleString('fr-FR')} kcal, pour une cible
+          annoncée à {valeurs.kcal.toLocaleString('fr-FR')}. Vérifie, ou garde tel quel si c’est
+          voulu.
+        </p>
+      )}
+    </>
+  );
+}
+
+/**
+ * La fiche : ce qu'on envoie, et ce qu'on reçoit.
+ *
+ * Deux gestes opposés dans une seule carte, parce que c'est la même chose vue
+ * des deux bouts : un coach génère, une personne colle.
+ *
+ * Coller ne change RIEN tant qu'on n'a pas vu ce qui va changer. L'aperçu
+ * n'est pas une politesse : des cibles écrasées en silence, c'est exactement
+ * la perte qu'on a déjà payée une fois dans ce dépôt.
+ */
+function CarteFiche({
+  row,
+  patch,
+}: {
+  row: SettingsRow;
+  patch: (p: Partial<SettingsRow>) => Promise<void>;
+}) {
+  const [colle, setColle] = useState('');
+  const [lecture, setLecture] = useState<LectureFiche | null>(null);
+  const [copie, setCopie] = useState(false);
+
+  const aEnvoyer = genererFiche({
+    cibles: row.ciblesNutrition,
+    aliments: row.alimentsPreferes ?? [],
+  });
+  // Le marqueur seul ne porte rien : il n'y a rien à envoyer.
+  const quelqueChoseAEnvoyer = aEnvoyer.includes('=');
+
+  return (
+    <section className={styles.card}>
+      <h2 className={styles.cardTitle}>Partager une fiche</h2>
+      <p className={styles.cardSub}>
+        Un texte court qui porte des cibles et des aliments. Il se colle dans un message — WhatsApp,
+        SMS, mail — et se relit ici. Ce qu’il évite, ce n’est pas le temps de saisie : c’est de
+        retaper 240 au lieu de 2 400 sans que personne ne le voie.
+      </p>
+
+      {quelqueChoseAEnvoyer ? (
+        <>
+          <pre className={styles.fichePre}>{aEnvoyer}</pre>
+          <button
+            type="button"
+            className={styles.secondary}
+            style={{ width: '100%', margin: '10px 0 0' }}
+            onClick={() =>
+              void (async () => {
+                try {
+                  await navigator.clipboard.writeText(aEnvoyer);
+                  setCopie(true);
+                } catch {
+                  // Presse-papier refusé : le texte reste sélectionnable au doigt.
+                  setCopie(false);
+                }
+              })()
+            }
+          >
+            {copie ? 'Copié ✓' : 'Copier ma fiche'}
+          </button>
+        </>
+      ) : (
+        <p className={styles.fieldHint}>
+          Rien à envoyer pour l’instant : pose des cibles ci-dessus, ou colle une fiche reçue.
+        </p>
+      )}
+
+      <h3 className={styles.sectionTitle}>Coller une fiche reçue</h3>
+      <textarea
+        className={styles.ficheZone}
+        value={colle}
+        onChange={(e) => {
+          setColle(e.target.value);
+          setLecture(null);
+        }}
+        placeholder="Colle ici le message entier, le bonjour et la signature compris."
+        rows={3}
+      />
+      <button
+        type="button"
+        className={styles.secondary}
+        style={{ width: '100%', margin: '10px 0 0' }}
+        disabled={colle.trim() === ''}
+        onClick={() => setLecture(lireFiche(colle))}
+      >
+        Lire la fiche
+      </button>
+
+      {lecture !== null && !lecture.trouvee && (
+        <p className={styles.fieldHint} style={{ color: 'var(--accent-ink)' }}>
+          Aucune fiche trouvée dans ce texte. Une fiche commence par <b>MAJK1</b> — vérifie que le
+          message a bien été collé en entier.
+        </p>
+      )}
+
+      {lecture?.trouvee === true && (
+        <div className={styles.fichePreview}>
+          {/*
+            L'aperçu dit ce qui va changer, et seulement ça. Les aliments
+            inconnus et les erreurs sont montrés AVANT, pas après : une fois
+            appliqué, il est trop tard pour s'en apercevoir.
+          */}
+          {lecture.cibles !== null && (
+            <p>
+              <b>Cibles</b> — entraînement {lecture.cibles.train.kcal} kcal, repos{' '}
+              {lecture.cibles.rest.kcal} kcal.
+              {row.ciblesNutrition !== null && ' Elles remplaceront les tiennes.'}
+            </p>
+          )}
+          {lecture.aliments.length > 0 && (
+            <p>
+              <b>{lecture.aliments.length} aliments</b> —{' '}
+              {lecture.aliments
+                .map((id) => FOOD_LIBRARY[id]?.label ?? id)
+                .slice(0, 4)
+                .join(', ')}
+              {lecture.aliments.length > 4 ? '…' : ''}
+            </p>
+          )}
+          {lecture.inconnus.length > 0 && (
+            <p style={{ color: 'var(--accent-ink)' }}>
+              <b>Non reconnus</b> — {lecture.inconnus.join(', ')}. Ils seront ignorés. Tu peux les
+              créer à la main depuis l’onglet Nutrition.
+            </p>
+          )}
+          {lecture.problemes.map((pb) => (
+            <p key={pb} style={{ color: 'var(--accent-ink)' }}>
+              {pb}
+            </p>
+          ))}
+          {lecture.cibles !== null && row.legacyNutritionPlan && (
+            /*
+              Prévenir, parce que c'est le seul effet de bord du bouton qui
+              ne se lit pas dans la fiche elle-même.
+            */
+            <p className={styles.fieldHint}>
+              <b>Ton plan nutritionnel sera masqué</b> : ce sont ces cibles qui piloteront l’onglet
+              Nutrition. Rien n’est effacé — tes repas, tes pesées et tes aliments restent en base
+              et reviennent en rallumant le plan dans la carte au-dessus.
+            </p>
+          )}
+          {lecture.cibles === null && lecture.aliments.length === 0 ? (
+            <p className={styles.fieldHint}>Rien d’utilisable dans cette fiche.</p>
+          ) : (
+            <button
+              type="button"
+              className={styles.secondary}
+              style={{ width: '100%', margin: '10px 0 0' }}
+              onClick={() =>
+                void (async () => {
+                  await patch(patchDeFiche(lecture));
+                  setColle('');
+                  setLecture(null);
+                })()
+              }
+            >
+              Appliquer cette fiche
+            </button>
+          )}
+        </div>
+      )}
+    </section>
+  );
+}
+
+/**
+ * Préparer la fiche de QUELQU'UN D'AUTRE.
+ *
+ * ── Pourquoi une carte séparée ────────────────────────────────────────────
+ *
+ * « Copier ma fiche », juste au-dessus, lit les réglages de celui qui tient
+ * le téléphone. Pour envoyer 2 100 kcal à quelqu'un, il aurait fallu écraser
+ * ses propres chiffres, copier, puis les remettre — et un oubli au milieu, et
+ * on s'entraîne pendant des semaines sur la diète d'un autre.
+ *
+ * Ce formulaire ne touche À RIEN. Pas de `patch`, pas de base : tout vit dans
+ * l'état du composant et disparaît quand on quitte l'écran. C'est voulu — ce
+ * sont les données de santé de quelqu'un d'autre, elles n'ont aucune raison
+ * de rester sur ce téléphone une fois le message envoyé.
+ *
+ * ── Ce qu'il ne fait pas ──────────────────────────────────────────────────
+ *
+ * Il ne calcule rien. Le poids, la taille, l'objectif se lisent dans le
+ * questionnaire ; les huit nombres se décident, ils ne se déduisent pas.
+ */
+function CarteFichePour() {
+  const [cibles, setCibles] = useState<CiblesNutrition>(CIBLES_NUTRITION_VIERGES);
+  const [collage, setCollage] = useState('');
+  const [copie, setCopie] = useState(false);
+
+  // Les aliments se lisent dans ce qu'on colle : le même analyseur que pour
+  // une fiche reçue, donc les deux dialectes d'identifiants sont acceptés.
+  const lu = collage.trim() === '' ? null : lireFiche(collage);
+  const aliments = lu?.aliments ?? [];
+
+  const fiche = genererFiche({ cibles, aliments });
+  const prete = fiche.includes('=');
+
+  return (
+    <section className={styles.card}>
+      <h2 className={styles.cardTitle}>Préparer une fiche pour quelqu’un</h2>
+      <p className={styles.cardSub}>
+        Pour un client. <b>Rien n’est enregistré ici</b> — ni dans tes réglages, ni en base. Tu
+        remplis, tu copies, tu envoies, et l’écran oublie tout.
+      </p>
+      <p className={styles.fieldHint}>
+        MAJK ne calcule pas ses calories. Son poids, sa taille et son objectif sont dans son
+        questionnaire : c’est toi qui lis, et toi qui décides.
+      </p>
+
+      {(['train', 'rest'] as const).map((kind) => (
+        <CiblesDuJour
+          key={kind}
+          kind={kind}
+          valeurs={cibles[kind]}
+          onChange={(suivantes) => setCibles({ ...cibles, [kind]: suivantes })}
+        />
+      ))}
+
+      <h3 className={styles.sectionTitle}>Ses aliments (facultatif)</h3>
+      <textarea
+        className={styles.ficheZone}
+        value={collage}
+        onChange={(e) => {
+          setCollage(e.target.value);
+          setCopie(false);
+        }}
+        placeholder={`Colle son message. La ligne ${MARQUEUR} y suffit.`}
+        rows={3}
+      />
+      {lu !== null && (
+        <p className={styles.fieldHint}>
+          {/*
+            Distinguer « pas de ligne MAJK1 » de « ligne lue, aucun aliment
+            connu » : le premier cas se corrige en recollant le bon message,
+            le second en complétant le catalogue. Un seul message pour les
+            deux renverrait Guillaume chercher la mauvaise cause.
+          */}
+          {!lu.trouvee
+            ? `Pas de ligne ${MARQUEUR} dans ce texte : c’est elle qui porte les aliments.`
+            : aliments.length > 0
+              ? `${String(aliments.length)} aliment${aliments.length > 1 ? 's' : ''} reconnu${aliments.length > 1 ? 's' : ''}.`
+              : 'Ligne lue, mais aucun aliment reconnu.'}
+          {lu.inconnus.length > 0 && ` Non reconnus : ${lu.inconnus.join(', ')}.`}
+        </p>
+      )}
+
+      {prete ? (
+        <>
+          <pre className={styles.fichePre}>{fiche}</pre>
+          <button
+            type="button"
+            className={styles.secondary}
+            style={{ width: '100%', margin: '10px 0 0' }}
+            onClick={() =>
+              void (async () => {
+                try {
+                  await navigator.clipboard.writeText(fiche);
+                  setCopie(true);
+                } catch {
+                  setCopie(false);
+                }
+              })()
+            }
+          >
+            {copie ? 'Copié ✓' : 'Copier sa fiche'}
+          </button>
+          <button
+            type="button"
+            className={styles.secondary}
+            style={{ width: '100%', margin: '10px 0 0' }}
+            onClick={() => {
+              setCibles(CIBLES_NUTRITION_VIERGES);
+              setCollage('');
+              setCopie(false);
+            }}
+          >
+            Vider, pour la personne suivante
+          </button>
+        </>
+      ) : (
+        <p className={styles.fieldHint}>
+          Il faut les quatre valeurs d’au moins une des deux journées pour produire une fiche.
+        </p>
+      )}
+    </section>
+  );
+}
