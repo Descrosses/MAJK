@@ -15,6 +15,15 @@ en IA. **Réponds toujours en français.**
 > ne jamais remettre le nom de base d'origine, sinon elles écriraient dans la
 > même base. Le format d'export reste `programme-12-semaines` (l'import des
 > sauvegardes de l'original doit marcher).
+>
+> **DA claire MAJK (décision de Guillaume, 21 novembre)** : un thème CLAIR
+> unique pour toute l'appli ; seul l'accent change (cobalt POWER, rouge MASS,
+> rose FEMMES, charbon plateforme). Elle REMPLACE les identités sombres
+> décrites plus bas (MASS du 14 novembre, synthwave FEMMES) : ces passages
+> restent comme historique, pas comme consigne. Polices : Oswald (titres,
+> `size-adjust` 86,4 % pour garder les largeurs de Barlow) et Inter (texte).
+> Zones sombres (en-têtes à photo, cartes de programme, bannières) : encres
+> `--ink-photo*`. Contrastes : `styles/themesClairs.test.ts`.
 
 ---
 
@@ -407,7 +416,7 @@ matériel et la durée avant d'écrire la moindre séance.
      toute la famille (FORCE et CONGESTION) : `[data-theme='mass']` presque
      noir et rouge, « // » rouge après les titres, semaine choisie rouge.
      Elle REMPLACE la palette claire ardoise (décision antérieure, renversée
-     par Guillaume). Contrastes mesurés par `styles/themeMass.test.ts`.
+     par Guillaume). Contrastes mesurés par `styles/themeMass.test.ts` (remplacé le 21 novembre par `styles/themesClairs.test.ts`).
      **Photos d'en-tête MASS — FAIT** : quatre photos fournies par Guillaume
      (885 px de large, pas agrandies), une par écran
      (`HABILLAGE.mass.entetes` : athlète → Accueil, disque → Semaine, salle →

@@ -1,114 +1,88 @@
 /*
- * Barlow Condensed, embarqué dans le dépôt.
+ * Oswald (titres, chiffres) et Inter (texte), embarqués dans le dépôt.
  *
- * Jamais chargé depuis internet : sans réseau dans la salle, la mise en page
+ * DA claire MAJK (21 novembre) : ces deux polices remplacent Barlow
+ * Condensed, Barlow, et les familles propres à MASS et FEMMES. Une seule
+ * typographie pour toute l'appli.
+ *
+ * Jamais chargées depuis internet : sans réseau dans la salle, la mise en page
  * ne doit pas changer (défaut n°6 du prototype).
  *
- * Fichiers : sous-ensemble « latin » de Google Fonts, qui couvre tout ce dont
- * l'appli a besoin — accents français, Œ/œ, le signe moins « − » des boutons
- * de saisie, le « × » des lignes de charge et les tirets typographiques.
+ * Fichiers : sous-ensemble « latin » (paquets @fontsource 5.3.0), qui couvre
+ * les accents français, Œ/œ, le signe moins « − » des boutons de saisie, le
+ * « × » des lignes de charge et les tirets typographiques. Comme Barlow
+ * avant elles, elles n'ont ni « → », ni « ≤ », ni « ≈ » : ces signes viennent
+ * de la police du système, comme avant (vérifié glyphe par glyphe).
  *
- * Licence SIL Open Font License 1.1 (Jeremy Tribby). Voir
- * src/assets/fonts/OFL.txt.
+ * `size-adjust: 86.4%` sur Oswald : ses capitales montent à 0,81 em contre
+ * 0,70 pour Barlow Condensed, et ses lettres sont 20 % plus larges. Réduit
+ * à 86,4 %, Oswald retrouve la hauteur de capitale de Barlow et ne dépasse
+ * plus sa largeur que de 4 % environ (mesuré sur « POSTERIOR CHAIN —
+ * DEADLIFT », « MES PROGRAMMES », « 3 × 2 × 142,5 KG ») : les titres gardent
+ * leur nombre de lignes, sans retoucher une seule taille ailleurs.
+ *
+ * Oswald n'a pas d'italique : un titre en italique est penché par le
+ * navigateur, ce que montrent les maquettes. Une graisse 800 demandée prend
+ * la 700, la plus grasse embarquée.
+ *
+ * Licence SIL Open Font License 1.1. Voir src/assets/fonts/OFL.txt.
  */
 
 @font-face {
-  font-family: 'Barlow Condensed';
+  font-family: 'Oswald';
+  size-adjust: 86.4%;
   font-style: normal;
   font-weight: 500;
   font-display: swap;
-  src: url('../assets/fonts/barlow-condensed-500-latin.woff2') format('woff2');
+  src: url('../assets/fonts/oswald-500-latin.woff2') format('woff2');
 }
 
 @font-face {
-  font-family: 'Barlow Condensed';
-  font-style: normal;
-  font-weight: 700;
-  font-display: swap;
-  src: url('../assets/fonts/barlow-condensed-700-latin.woff2') format('woff2');
-}
-
-/*
- * « Barlow Femmes » — les coupes que la planche FEMMES réclame.
- *
- * La planche est composée en VRAI italique extra-gras. L'application n'en
- * embarquait pas : le navigateur penchait et engraissait le 700 droit
- * lui-même, et les titres sortaient 3 à 5 % trop étroits, avec des formes
- * de lettres fausses.
- *
- * Une famille À PART, et non de nouvelles coupes de « Barlow Condensed » :
- * ajouter un 800 ou un italique à la famille partagée aurait changé le
- * rendu de POWER et de MASS partout où ils demandent du gras ou de
- * l'italique. Sous ce nom, seuls les écrans FEMMES la voient.
- */
-@font-face {
-  font-family: 'Barlow Femmes';
+  font-family: 'Oswald';
+  size-adjust: 86.4%;
   font-style: normal;
   font-weight: 600;
   font-display: swap;
-  src: url('../assets/fonts/barlow-condensed-600-latin.woff2') format('woff2');
+  src: url('../assets/fonts/oswald-600-latin.woff2') format('woff2');
 }
 
 @font-face {
-  font-family: 'Barlow Femmes';
+  font-family: 'Oswald';
+  size-adjust: 86.4%;
   font-style: normal;
-  font-weight: 700;
+  font-weight: 700 900;
   font-display: swap;
-  src: url('../assets/fonts/barlow-condensed-700-latin.woff2') format('woff2');
+  src: url('../assets/fonts/oswald-700-latin.woff2') format('woff2');
 }
 
 @font-face {
-  font-family: 'Barlow Femmes';
-  font-style: italic;
-  font-weight: 600;
-  font-display: swap;
-  src: url('../assets/fonts/barlow-condensed-600-italic-latin.woff2') format('woff2');
-}
-
-@font-face {
-  font-family: 'Barlow Femmes';
-  font-style: italic;
-  font-weight: 800;
-  font-display: swap;
-  src: url('../assets/fonts/barlow-condensed-800-italic-latin.woff2') format('woff2');
-}
-
-/*
- * « Barlow Mass » — le vrai italique extra-gras du titre de l'écran Semaine
- * MASS (référence de Guillaume, 14 novembre). Même fichier que l'italique
- * 800 de FEMMES, déjà embarqué : aucun octet de plus. Une famille à part,
- * pour la même raison que ci-dessus — POWER et le reste de MASS ne la
- * voient pas.
- */
-@font-face {
-  font-family: 'Barlow Mass';
-  font-style: italic;
-  font-weight: 800;
-  font-display: swap;
-  src: url('../assets/fonts/barlow-condensed-800-italic-latin.woff2') format('woff2');
-}
-
-/*
- * « Barlow Femmes Texte » — le texte courant des écrans FEMMES.
- *
- * Le reste de l'application compose son texte dans la police du système,
- * qui change d'un téléphone à l'autre : les retours à la ligne aussi. Une
- * copie de planche ne peut pas dépendre de l'appareil. Mesuré sur sept
- * phrases de la planche : Barlow à 16,5 px en égale la largeur à 3 % près,
- * là où la police système en demandait 14,9.
- */
-@font-face {
-  font-family: 'Barlow Femmes Texte';
+  font-family: 'Inter';
   font-style: normal;
-  font-weight: 400;
+  font-weight: 100 400;
   font-display: swap;
-  src: url('../assets/fonts/barlow-400-latin.woff2') format('woff2');
+  src: url('../assets/fonts/inter-400-latin.woff2') format('woff2');
 }
 
 @font-face {
-  font-family: 'Barlow Femmes Texte';
+  font-family: 'Inter';
   font-style: normal;
   font-weight: 500;
   font-display: swap;
-  src: url('../assets/fonts/barlow-500-latin.woff2') format('woff2');
+  src: url('../assets/fonts/inter-500-latin.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('../assets/fonts/inter-600-latin.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 700 900;
+  font-display: swap;
+  src: url('../assets/fonts/inter-700-latin.woff2') format('woff2');
 }

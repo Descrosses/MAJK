@@ -110,15 +110,15 @@ export default defineConfig({
         display: 'standalone',
         orientation: 'portrait',
         /*
-         * Le graphite de la plateforme, et non le bleu nuit de POWER 12.
+         * Le crème de la DA claire MAJK (21 novembre), le même que `--bg`.
          *
          * Ces deux couleurs ne décorent rien : `background_color` est le fond
-         * de l'écran de lancement, derrière l'icône. Laisser le bleu nuit y
-         * aurait posé l'icône graphite sur un carré bleu pendant une seconde,
-         * à chaque ouverture.
+         * de l'écran de lancement, derrière l'icône, et `theme_color` celui de
+         * la barre du téléphone. Les laisser sombres ferait clignoter un écran
+         * noir avant chaque ouverture d'une appli claire.
          */
-        background_color: '#0c0e11',
-        theme_color: '#0c0e11',
+        background_color: '#f7f4ee',
+        theme_color: '#f7f4ee',
         categories: ['health', 'fitness', 'sports'],
         icons: [
           { src: 'icons/majk-192.png', sizes: '192x192', type: 'image/png' },

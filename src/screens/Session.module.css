@@ -2477,9 +2477,14 @@
   /* Le contenu commence SOUS la barre d'état : collé à l'heure, le retour
      « Semaine 1 » tombait dans la zone qu'iOS assombrit (vidéo de Guillaume,
      15 novembre). La photo, elle, reste sous l'heure. */
-  padding: calc(var(--haut-ecran) + 10px) 19px 8px;
+  padding: calc(var(--haut-ecran) + 10px) 19px 14px;
   border-bottom: 0;
-  background: var(--bg);
+  /* Zone sombre dans l'appli claire : la photo s'efface dans le voile MASS,
+     pas dans la page crème, et l'encre passe au blanc. */
+  background: rgb(var(--voile));
+  --ink: var(--ink-photo);
+  --ink-2: var(--ink-photo-2);
+  --ink-3: var(--ink-photo-3);
 }
 
 :global([data-theme='mass']) .ecranSeance .enteteSeance .enteteFond {
@@ -2495,7 +2500,7 @@
 :global([data-theme='mass']) .ecranSeance .enteteSeance .back {
   margin-left: -6px;
   color: #f2f2f2;
-  font-family: 'Barlow Mass', var(--font-cond);
+  font-family: var(--font-cond);
   font-size: 1.125rem;
   font-style: italic;
   font-weight: 800;
@@ -2506,7 +2511,7 @@
 :global([data-theme='mass']) .ecranSeance .enteteSeance .title {
   width: fit-content;
   margin-top: 0;
-  font-family: 'Barlow Mass', var(--font-cond);
+  font-family: var(--font-cond);
   font-size: 3.1rem;
   font-style: italic;
   font-weight: 800;
@@ -2575,7 +2580,7 @@
 }
 
 :global([data-theme='mass']) .ecranSeance .avancementTexte {
-  color: #f0f0f0;
+  color: var(--ink);
   font-size: 0.9375rem;
   font-weight: 600;
 }
@@ -2590,7 +2595,7 @@
 :global([data-theme='mass']) .ecranSeance .avancementPas {
   height: 8px;
   border-radius: 4px;
-  background: #2a2a2b;
+  background: var(--surface-3);
 }
 
 /* Démarrer : dégradé rouge profond, halo, italique extra-gras. */
@@ -2601,7 +2606,7 @@
   border: 1px solid var(--mass-rouge-bord);
   border-radius: 14px;
   background: var(--mass-degrade-action);
-  font-family: 'Barlow Mass', var(--font-cond);
+  font-family: var(--font-cond);
   font-size: 1.5rem;
   font-style: italic;
   font-weight: 800;
@@ -2616,7 +2621,7 @@
   margin: 17px 13px;
   border: 1px solid var(--mass-carte-bord);
   border-radius: 14px;
-  background: linear-gradient(180deg, #1b1b1c 0%, #101011 100%);
+  background: var(--mass-carte-fond);
   box-shadow: var(--mass-liseret);
 }
 
@@ -2625,8 +2630,8 @@
 }
 
 :global([data-theme='mass']) .ecranSeance .exRepere {
-  color: #b9b9b9;
-  font-family: 'Barlow Mass', var(--font-cond);
+  color: var(--ink-2);
+  font-family: var(--font-cond);
   font-size: 0.9375rem;
   font-style: italic;
   font-weight: 800;
@@ -2634,8 +2639,8 @@
 }
 
 :global([data-theme='mass']) .ecranSeance .exName {
-  color: #fff;
-  font-family: 'Barlow Mass', var(--font-cond);
+  color: var(--ink);
+  font-family: var(--font-cond);
   font-size: 1.5rem;
   font-style: italic;
   font-weight: 800;
@@ -2655,14 +2660,14 @@
 :global([data-theme='mass']) .ecranSeance .chargeCible,
 :global([data-theme='mass']) .ecranSeance .chargeCible b,
 :global([data-theme='mass']) .ecranSeance .chargeSource {
-  color: #e8e8e8;
+  color: var(--ink-2);
   font-size: 0.96875rem;
   line-height: 1.22;
 }
 
 :global([data-theme='mass']) .ecranSeance .chargeCible b,
 :global([data-theme='mass']) .ecranSeance .chargePct {
-  color: #fff;
+  color: var(--ink);
 }
 
 :global([data-theme='mass']) .ecranSeance .chargeSource {
@@ -2676,8 +2681,8 @@
   padding: 8px 14px 8px 52px;
   border: 1.5px solid var(--mass-rouge);
   border-radius: 12px;
-  background: linear-gradient(180deg, rgb(120 10 16 / 30%) 0%, rgb(60 5 8 / 22%) 100%);
-  color: #f0f0f0;
+  background: var(--accent-dim);
+  color: var(--ink);
   font-size: 0.96875rem;
   line-height: 1.22;
 }
@@ -2702,11 +2707,11 @@
 }
 
 :global([data-theme='mass']) .ecranSeance .vigilance b {
-  color: #fff;
+  color: var(--ink);
 }
 
 :global([data-theme='mass']) .ecranSeance .exSub {
-  color: #f0f0f0;
+  color: var(--ink);
   font-size: 0.96875rem;
 }
 
@@ -2726,7 +2731,7 @@
   border: 1px solid var(--mass-rouge-bord);
   border-radius: 14px;
   background: var(--mass-degrade-action);
-  font-family: 'Barlow Mass', var(--font-cond);
+  font-family: var(--font-cond);
   font-size: 1.3125rem;
   font-style: italic;
   font-weight: 800;
@@ -2748,7 +2753,7 @@
 
 :global([data-theme='mass']) .ecranSeance .setCourante .setIndex {
   color: var(--mass-rouge);
-  font-family: 'Barlow Mass', var(--font-cond);
+  font-family: var(--font-cond);
   font-size: 1.875rem;
   font-style: italic;
   font-weight: 800;
@@ -2756,7 +2761,7 @@
 
 /* Les curseurs : libellé blanc, cadre bordé, chiffre en italique extra-gras. */
 :global([data-theme='mass']) .ecranSeance .steppersLigne > div > div:first-child {
-  color: #f0f0f0;
+  color: var(--ink-2);
   font-size: 0.8125rem;
   font-weight: 700;
 }
@@ -2767,8 +2772,8 @@
 }
 
 :global([data-theme='mass']) .ecranSeance .steppersLigne :global(.tnum) {
-  color: #fff;
-  font-family: 'Barlow Mass', var(--font-cond);
+  color: var(--ink);
+  font-family: var(--font-cond);
   font-size: 1.75rem;
   font-style: italic;
   font-weight: 800;
@@ -2781,7 +2786,7 @@
   border: 1px solid var(--mass-rouge-bord);
   border-radius: 12px;
   background: var(--mass-degrade-action);
-  font-family: 'Barlow Mass', var(--font-cond);
+  font-family: var(--font-cond);
   font-size: 1.1875rem;
   font-style: italic;
   font-weight: 800;
@@ -2799,7 +2804,7 @@
   border-radius: 10px;
   background: var(--mass-sombre-fond);
   box-shadow: var(--mass-liseret);
-  color: #fff;
+  color: var(--ink);
 }
 
 :global([data-theme='mass']) .ecranSeance .failToggleOn {
@@ -2810,8 +2815,8 @@
 :global([data-theme='mass']) .ecranSeance .addButton {
   border: 1.5px solid var(--mass-rouge);
   border-radius: 12px;
-  background: linear-gradient(180deg, rgb(120 10 16 / 22%) 0%, rgb(60 5 8 / 14%) 100%);
-  color: #fff;
+  background: var(--accent-dim);
+  color: var(--accent-ink);
 }
 
 /* Panneaux et états de la séance (lot D) : cartes anthracite bordées au lieu
@@ -2828,14 +2833,14 @@
 :global([data-theme='mass']) .ecranSeance .mediaBlock {
   border: 1px solid var(--mass-carte-bord);
   border-radius: 10px;
-  background: #0e0e0f;
+  background: var(--surface-2);
 }
 
 :global([data-theme='mass']) .ecranSeance .panelTitle,
 :global([data-theme='mass']) .ecranSeance .mediaBlockTitle,
 :global([data-theme='mass']) .ecranSeance .supersetTitle {
-  color: #fff;
-  font-family: 'Barlow Mass', var(--font-cond);
+  color: var(--ink);
+  font-family: var(--font-cond);
   font-style: italic;
   font-weight: 800;
   font-size: 1.25rem;
@@ -2848,7 +2853,7 @@
   border: 1px solid var(--mass-curseur-bord);
   border-radius: 10px;
   background: var(--mass-champ-fond);
-  color: #fff;
+  color: var(--ink);
 }
 
 /* Le superset garde son cadre rouge (il se repère de loin), sur une carte

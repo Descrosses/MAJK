@@ -363,7 +363,7 @@
 
 :global([data-theme='mass']) .weekNum {
   font-size: 2.25rem;
-  color: #f2f2f2;
+  color: var(--ink);
 }
 
 :global([data-theme='mass']) .weekOn {
@@ -381,9 +381,9 @@
 
 :global([data-theme='mass']) .days {
   margin-bottom: 20px;
-  border-color: #343535;
+  border-color: var(--mass-carte-bord);
   border-radius: 12px;
-  background: #1a1a1b;
+  background: var(--surface);
 }
 
 /* Séparateurs en retrait de 12 px de chaque côté, comme sur la référence. */
@@ -391,7 +391,7 @@
   min-height: 76px;
   padding-block: 10px;
   border-top: 0;
-  background: linear-gradient(#2a2b2c, #2a2b2c) 12px 0 / calc(100% - 24px) 1px no-repeat;
+  background: linear-gradient(var(--line), var(--line)) 12px 0 / calc(100% - 24px) 1px no-repeat;
 }
 
 :global([data-theme='mass']) .dayRow:first-child {
@@ -414,15 +414,15 @@
 
 /* Seul « À faire » change de teinte : Faite, Sautée, Aujourd'hui gardent la leur. */
 :global([data-theme='mass']) .status:not(.statusDone, .statusSkipped, .statusToday) {
-  border-color: #4b4b4b;
-  color: #f0f0f0;
+  border-color: var(--line-strong);
+  color: var(--ink);
 }
 
 :global([data-theme='mass']) .cta {
   min-height: 56px;
   border: 1px solid #ef2a33;
   background: linear-gradient(180deg, #e0121c 0%, #c00a17 48%, #8a030d 100%);
-  font-family: 'Barlow Mass', var(--font-cond);
+  font-family: var(--font-cond);
   font-size: 1.5625rem;
   font-style: italic;
   font-weight: 800;

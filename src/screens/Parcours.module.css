@@ -213,6 +213,12 @@
 /* --------------------------------------------------- carte de cycle -- */
 
 .carteCycle {
+  /* Zone sombre (photo + voile) dans l'appli claire : encres blanches. */
+  --ink: var(--ink-photo);
+  --ink-2: var(--ink-photo-2);
+  --ink-3: var(--ink-photo-3);
+  --line-strong: var(--ligne-photo);
+  color: var(--ink);
   position: relative;
   display: block;
   width: 100%;

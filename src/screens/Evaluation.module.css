@@ -137,7 +137,7 @@
 .retour {
   margin: 0;
   color: #f2f2f2;
-  font-family: 'Barlow Mass', var(--font-cond);
+  font-family: var(--font-cond);
   font-size: 1.125rem;
   font-style: italic;
   font-weight: 800;
@@ -154,7 +154,7 @@
 .entete .titre {
   max-width: 300px;
   margin-top: 6px;
-  font-family: 'Barlow Mass', var(--font-cond);
+  font-family: var(--font-cond);
   font-size: 2.95rem;
   font-style: italic;
   font-weight: 800;
@@ -223,32 +223,32 @@
 .repere,
 .nom,
 .rang {
-  font-family: 'Barlow Mass', var(--font-cond);
+  font-family: var(--font-cond);
   font-style: italic;
   font-weight: 800;
 }
 
 .repere {
-  color: #f0f0f0;
+  color: var(--ink-2);
   font-size: 1rem;
   letter-spacing: 0.06em;
 }
 
 .nom {
-  color: #fff;
+  color: var(--ink);
   font-size: 1.875rem;
   letter-spacing: 0.01em;
   line-height: 1.05;
 }
 
 .carte .etat {
-  color: #e0e0e0;
+  color: var(--ink-2);
   font-size: 0.9375rem;
   line-height: 1.25;
 }
 
 .carte .legende {
-  color: #cfcfcf;
+  color: var(--ink-2);
   font-size: 0.875rem;
   font-weight: 600;
   letter-spacing: 0.04em;
@@ -260,7 +260,7 @@
   border-radius: 10px;
   background: var(--mass-sombre-fond);
   box-shadow: var(--mass-liseret);
-  color: #fff;
+  color: var(--ink);
   /* Gras penché, plus extra-gras : les choix se lisent, le titre domine. */
   font-family: var(--font-cond);
   font-size: 1.1875rem;
@@ -277,14 +277,14 @@
 }
 
 .rang {
-  color: #fff;
+  color: var(--ink);
   font-size: 1.875rem;
   line-height: 1.5;
 }
 
 /* Les curseurs : libellé clair, chiffre en italique extra-gras. */
 .steppers > div > div:first-child {
-  color: #f0f0f0;
+  color: var(--ink-2);
   font-size: 0.8125rem;
   font-weight: 700;
 }
@@ -299,15 +299,15 @@
 }
 
 .steppers :global(.tnum) {
-  color: #fff;
-  font-family: 'Barlow Mass', var(--font-cond);
+  color: var(--ink);
+  font-family: var(--font-cond);
   font-size: 1.75rem;
   font-style: italic;
   font-weight: 800;
 }
 
 .carte .date {
-  color: #e6e6e6;
+  color: var(--ink-2);
   font-size: 0.9375rem;
   font-weight: 500;
 }
@@ -322,7 +322,7 @@
   position: absolute;
   top: 50%;
   left: 15px;
-  color: #e6e6e6;
+  color: var(--ink-2);
   transform: translateY(-50%);
   pointer-events: none;
 }
@@ -345,7 +345,7 @@
   border-color: var(--mass-curseur-bord);
   border-radius: 10px;
   background: var(--mass-champ-fond);
-  color: #fff;
+  color: var(--ink);
   font-size: 1.0625rem;
   font-weight: 700;
 }
@@ -354,7 +354,7 @@
   border: 1px solid var(--mass-rouge-bord);
   border-radius: 10px;
   background: var(--mass-degrade-choix);
-  font-family: 'Barlow Mass', var(--font-cond);
+  font-family: var(--font-cond);
   font-size: 1.1875rem;
   font-style: italic;
   font-weight: 800;
@@ -363,7 +363,7 @@
 
 .valider:disabled {
   border-color: var(--mass-curseur-bord);
-  background: #1d1d1e;
-  color: #8a8c90;
+  background: var(--surface-3);
+  color: var(--ink-3);
   box-shadow: none;
 }
