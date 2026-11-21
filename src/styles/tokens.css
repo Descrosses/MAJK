@@ -22,9 +22,9 @@
  *   --rouge           6,1      6,7       5,8        5,2     AA partout
  *   --line-strong     4,3      4,7       4,1        3,7     ≥ 3 (contour de contrôle)
  *
- * Blanc sur l'accent (boutons) : cobalt 7,2 · rouge MASS 5,1 · rose FEMMES
+ * Blanc sur l'accent (boutons) : cobalt 7,2 · rouge MASS 5,3 · rose FEMMES
  * 5,2 · charbon 15,8 · vert 6,5. Le texte coloré passe par --accent-ink :
- * cobalt foncé 9,2 · rouge foncé 7,1 · rose foncé 7,0 sur le fond.
+ * cobalt foncé 9,2 · rouge foncé 7,2 · rose foncé 7,0 sur le fond.
  */
 
 /*
@@ -242,12 +242,15 @@
  * Historique, pour ne pas le refaire : palette crème, puis claire ardoise,
  * puis sombre noir et rouge (maquettes du 14 novembre). Le 21 novembre,
  * Guillaume a choisi la DA claire unique pour tous les programmes : MASS garde
- * son ROUGE comme accent, sur la base claire commune.
+ * son ROUGE comme accent, sur la base claire commune, et rien d'autre — plus
+ * aucun style propre à MASS (« la même DA pour chaque programme, juste les
+ * couleurs changent »). Le rouge vif #d71f26, jugé clinquant, devient
+ * #c8312f ; le #b94a48 essayé ensuite était terne.
  */
 [data-theme='mass'] {
   /*
-   * Blanc sur --accent (boutons) : 5,1. Texte rouge : --accent-ink, 7,1 sur
-   * le fond. Les autres contrastes sont ceux de la base (en-tête du fichier).
+   * Blanc sur --accent (boutons) : 5,3. Texte rouge : --accent-ink, 7,2 sur
+   * le fond, 6,1 sur la carte la plus foncée. Les autres contrastes sont ceux de la base (en-tête du fichier).
    */
   --bg: #f7f4ee;
   --bg-2: #efeae2;
@@ -263,13 +266,13 @@
   --ink-3: #5e5850; /* libellés non essentiels — 5,0:1 au pire */
   --ink-on-accent: #ffffff;
 
-  --accent: #d71f26;
-  --accent-bright: #e8333a;
-  --accent-deep: #a3151b;
-  --accent-dim: #fbe3e4;
+  --accent: #c8312f;
+  --accent-bright: #d8433f;
+  --accent-deep: #9e1f1d;
+  --accent-dim: #f9e2e1;
 
-  --accent-ink: #a3151b;
-  --accent-ink-fort: #a3151b;
+  --accent-ink: #9e1f1d;
+  --accent-ink-fort: #9e1f1d;
 
   /* Couleurs d'état : celles de POWER, mesurées ici (ligne --rouge ci-dessus). */
   --vert: #246b41;
@@ -281,14 +284,14 @@
   --macro-glucides: #3d8dc9;
   --macro-proteines: #cf5a86;
   --macro-lipides: #a87b22;
-  --bloc-test: #d71f26;
+  --bloc-test: #c8312f;
 
   --ink-fort: #1f2327;
   --voile: 58 13 16;
   --ombre-titre: 0 2px 12px rgb(0 0 0 / 55%);
 
   --shadow-card: 0 1px 2px rgb(31 35 39 / 6%), 0 4px 14px rgb(31 35 39 / 6%);
-  --shadow-action: 0 8px 20px rgb(215 31 38 / 30%);
+  --shadow-action: 0 8px 20px rgb(200 49 47 / 30%);
 }
 
 /*
@@ -350,13 +353,12 @@
 }
 
 /*
- * Les jetons propres aux styles MASS, rangés UNE fois.
- *
- * Déclarés sur `:root` et non sous `[data-theme='mass']` : le combiné MASS
- * s'ouvre aussi depuis le catalogue, sous le thème de la plateforme. Passés en
- * clair le 21 novembre (cartes blanches, choix et champs crème, bords
- * --line-strong) ; les dégradés ROUGES des boutons et des choix actifs, et
- * l'argent des titres posés sur photo, sont gardés.
+ * Encres des zones SOMBRES, communes à tous les thèmes, et les quatre jetons
+ * des BANDEAUX MASS. Le 21 novembre (lot 3), MASS a perdu tout style propre
+ * SAUF ses bandeaux, que Guillaume a gardés « tout comme avant » : titre
+ * argent, ombre, trait, rouge d'origine. Déclarés sur `:root` : le combiné
+ * MASS s'ouvre aussi depuis le catalogue, sous le thème de la plateforme.
+ * Les autres jetons `--mass-*` (cartes, boutons, champs) sont retirés.
  */
 :root {
   /*
@@ -369,37 +371,9 @@
   --ink-photo-3: rgb(255 255 255 / 78%);
   --ligne-photo: rgb(255 255 255 / 55%);
 
-  /* Titres : argent poli, blanc en haut, cassure grise sous le milieu. */
+  /* Bandeaux MASS : titre argent poli, ombre portée, halo du trait, rouge. */
   --mass-argent: linear-gradient(180deg, #ffffff 0%, #f1f1f1 44%, #a3a4a5 56%, #c9cacb 100%);
   --mass-ombre-titre: drop-shadow(0 2px 6px rgb(0 0 0 / 60%));
-
-  /* Le rouge des accents (traits, icônes, bords d'alerte) et son halo. */
-  --mass-rouge: #d71f26;
   --mass-halo-trait: 0 0 0 transparent;
-
-  /* Boutons d'action (Démarrer, fiche) et choix actifs (Combiné). */
-  --mass-rouge-bord: #ff3b42;
-  --mass-degrade-action: linear-gradient(180deg, #e0121c 0%, #b40b16 50%, #7d070e 100%);
-  --mass-degrade-choix: linear-gradient(180deg, #d8121c 0%, #a50c15 55%, #7d070e 100%);
-  --mass-liseret-action: inset 0 1px 0 rgb(255 255 255 / 22%);
-  --mass-liseret-choix: inset 0 1px 0 rgb(255 255 255 / 18%);
-
-  /* Cartes blanches, bord crème. */
-  --mass-carte-fond: linear-gradient(180deg, #ffffff 0%, #fbf9f5 100%);
-  --mass-carte-bord: #e9e2d9;
-  --mass-liseret: inset 0 1px 0 rgb(255 255 255 / 0%);
-
-  /* Choix inactifs, curseurs et champs : crème, bordés. */
-  --mass-sombre-fond: linear-gradient(180deg, #ffffff 0%, #f7f4ee 100%);
-  --mass-sombre-bord: #7a7368;
-  --mass-curseur-fond: linear-gradient(180deg, #ece6dd 0%, #e2dbd0 100%);
-  --mass-curseur-bord: #7a7368;
-  --mass-champ-fond: linear-gradient(180deg, #f7f4ee 0%, #f3efe8 100%);
-
-  /* Puces de choix (semaines, débuts/fins) : écran Semaine validé. */
-  --mass-puce-fond: linear-gradient(180deg, #ffffff 0%, #f7f4ee 100%);
-  --mass-puce-bord: #e9e2d9;
-  --mass-puce-on-fond: linear-gradient(180deg, #570e11 0%, #8e0c13 55%, #d0111a 100%);
-  --mass-puce-on-bord: #c5262c;
-  --mass-puce-on-halo: 0 6px 16px rgb(215 31 38 / 25%);
+  --mass-rouge: #d71f26;
 }

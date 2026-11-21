@@ -16,8 +16,8 @@
 /* Le choix retenu (matériel, modalité) : il doit se voir d'un coup d'œil. */
 .choisi {
   border-color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 22%, var(--surface));
-  color: var(--ink);
+  background: var(--accent);
+  color: var(--ink-on-accent);
 }
 
 .etat {
@@ -90,16 +90,19 @@
 
 /* ===================================================================== */
 /*
- * Le combiné MASS d'après la référence de Guillaume (14 novembre).
- * Mesures relevées sur sa capture (850 px = 402 px CSS, soit × 0,473),
- * écran entier, barre d'état comprise.
+ * Le combiné MASS dans la DA claire MAJK (21 novembre) : sous l'en-tête, mêmes
+ * classes que la séance POWER, seul l'accent change. Ces règles ne couvrent
+ * que ce que la séance n'a pas.
  *
- * Écarts VOULUS, parce que la référence contredit une règle de l'app :
- * - Boutons, curseurs et champ de date gardent 48 px de haut (`--tap`, « non
- *   négociable ») ; la référence les dessine à 34–36 px.
- * - « Enregistrer le test » reste dans la carte : sans lui, rien ne s'écrit.
- * - Dans le cycle, « MASS FORCE » est une étiquette sans chevron : la
- *   navigation s'y fait par les onglets, il n'y a nulle part où revenir.
+ * Écarts toujours VOULUS : boutons, curseurs et champ de date à 48 px
+ * (`--tap`) ; « Enregistrer le test » dans la carte ; dans le cycle,
+ * « MASS FORCE » est une étiquette, pas un bouton.
+ */
+
+/*
+ * L'EN-TÊTE garde l'ancien bandeau MASS (photo, titre argent, encadrés
+ * sombres) : Guillaume a préféré les anciens bandeaux, « tout comme avant »
+ * (21 novembre). Le reste de l'écran suit la séance POWER.
  */
 
 /* ---------------------------------------------------------- en-tête -- */
@@ -213,103 +216,14 @@
 /* ------------------------------------------------------ carte de test -- */
 
 .carte {
-  margin: 16px 14px;
-  border: 1px solid var(--mass-carte-bord);
-  border-radius: 12px;
-  background: var(--mass-carte-fond);
-  box-shadow: var(--mass-liseret);
+  border: 1px solid var(--line);
 }
 
-.repere,
-.nom,
-.rang {
-  font-family: var(--font-cond);
-  font-style: italic;
-  font-weight: 800;
-}
-
-.repere {
-  color: var(--ink-2);
-  font-size: 1rem;
-  letter-spacing: 0.06em;
-}
-
-.nom {
-  color: var(--ink);
-  font-size: 1.875rem;
-  letter-spacing: 0.01em;
-  line-height: 1.05;
-}
-
-.carte .etat {
-  color: var(--ink-2);
-  font-size: 0.9375rem;
-  line-height: 1.25;
-}
-
-.carte .legende {
-  color: var(--ink-2);
-  font-size: 0.875rem;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-}
-
-/* Matériel et modalité : sombres, la choisie rouge avec son halo. */
-.option {
-  border-color: var(--mass-sombre-bord);
-  border-radius: 10px;
-  background: var(--mass-sombre-fond);
-  box-shadow: var(--mass-liseret);
-  color: var(--ink);
-  /* Gras penché, plus extra-gras : les choix se lisent, le titre domine. */
-  font-family: var(--font-cond);
-  font-size: 1.1875rem;
-  font-style: italic;
-  font-weight: 700;
-}
-
+/* Le choix retenu (matériel, modalité) : plein, à l'accent du programme. */
 .option.choisi {
-  border-color: var(--mass-rouge-bord);
-  background: var(--mass-degrade-choix);
-  box-shadow:
-    0 0 14px rgb(226 10 17 / 45%),
-    var(--mass-liseret-choix);
-}
-
-.rang {
-  color: var(--ink);
-  font-size: 1.875rem;
-  line-height: 1.5;
-}
-
-/* Les curseurs : libellé clair, chiffre en italique extra-gras. */
-.steppers > div > div:first-child {
-  color: var(--ink-2);
-  font-size: 0.8125rem;
-  font-weight: 700;
-}
-
-.steppers > div > div:last-child {
-  border: 1px solid var(--mass-curseur-bord);
-  background: var(--mass-curseur-fond);
-}
-
-.steppers button:not(:global(.tnum)) {
-  background: rgb(0 0 0 / 18%);
-}
-
-.steppers :global(.tnum) {
-  color: var(--ink);
-  font-family: var(--font-cond);
-  font-size: 1.75rem;
-  font-style: italic;
-  font-weight: 800;
-}
-
-.carte .date {
-  color: var(--ink-2);
-  font-size: 0.9375rem;
-  font-weight: 500;
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--ink-on-accent);
 }
 
 /* Le champ de date : icône calendrier à gauche, derrière un filet. */
@@ -334,7 +248,7 @@
   bottom: 10px;
   left: 50px;
   width: 1px;
-  background: var(--mass-curseur-bord);
+  background: var(--line-strong);
   pointer-events: none;
 }
 
@@ -342,28 +256,6 @@
   width: 100%;
   min-height: var(--tap);
   padding-left: 64px;
-  border-color: var(--mass-curseur-bord);
-  border-radius: 10px;
-  background: var(--mass-champ-fond);
-  color: var(--ink);
   font-size: 1.0625rem;
   font-weight: 700;
-}
-
-.valider {
-  border: 1px solid var(--mass-rouge-bord);
-  border-radius: 10px;
-  background: var(--mass-degrade-choix);
-  font-family: var(--font-cond);
-  font-size: 1.1875rem;
-  font-style: italic;
-  font-weight: 800;
-  box-shadow: var(--mass-liseret-choix);
-}
-
-.valider:disabled {
-  border-color: var(--mass-curseur-bord);
-  background: var(--surface-3);
-  color: var(--ink-3);
-  box-shadow: none;
 }

@@ -16,7 +16,13 @@
 .controls {
   display: flex;
   align-items: stretch;
-  background: var(--surface-2);
+  /*
+   * DA claire : le champ est un CONTRÔLE, il a un contour (--line-strong,
+   * 3:1 minimum). Sans lui, le fond crème sur la carte blanche ne faisait
+   * que 1,1:1 : on voyait les boutons, pas la boîte qui les relie.
+   */
+  border: 1px solid var(--line-strong);
+  background: var(--bg);
   border-radius: var(--radius-sm);
   overflow: hidden;
 }
@@ -34,6 +40,20 @@
 .button:active {
   background: var(--accent);
   color: var(--ink-on-accent);
+}
+
+/*
+ * « + » porte l'accent du programme (maquette MAJK) : c'est le geste le plus
+ * fréquent entre deux séries — monter la charge, ajouter une rep. « − » reste
+ * neutre. Blanc sur l'accent : 5,1:1 au minimum (rouge MASS).
+ */
+.button:last-child {
+  background: var(--accent);
+  color: var(--ink-on-accent);
+}
+
+.button:last-child:active {
+  background: var(--accent-deep);
 }
 
 .button:disabled {
@@ -164,13 +184,4 @@
 
 .compact .label {
   letter-spacing: 0.02em;
-}
-
-/*
- * MASS : la valeur saisie est blanche sur la maquette (78,7 comme les kilos
- * de la séance), pas rouge. Le rouge y est réservé aux boutons et aux pavés.
- */
-:global([data-theme='mass']) .accent .value,
-:global([data-theme='mass']) .accent .input {
-  color: var(--ink);
 }

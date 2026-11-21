@@ -62,7 +62,7 @@ export const HABILLAGE: Record<FamilleId, HabillageFamille> = {
    */
   mass: {
     photo: 'force',
-    teinte: '#da1d28',
+    teinte: '#c8312f',
     marqueAccueil: true,
     entetes: {
       accueil: 'massAthlete',

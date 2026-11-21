@@ -86,8 +86,14 @@
   align-items: center;
   gap: 5px;
   padding: 4px 10px;
-  border: 1px solid var(--line-strong);
+  /*
+   * Une pastille INFORME, on ne la touche pas : bord décoratif (--line) sur
+   * fond blanc. Avec le contour des contrôles, cinq pastilles
+   * pesaient plus lourd que le bouton « Démarrer » (retour de Guillaume).
+   */
+  border: 1px solid var(--line);
   border-radius: 999px;
+  background: var(--surface);
   color: var(--ink-2);
   font-size: 0.8125rem;
   font-weight: 600;
@@ -132,14 +138,18 @@
   text-transform: uppercase;
 }
 
+/*
+ * Consigne de séance : un aplat de l'accent pâle, sans liseré (maquette
+ * MAJK). Le liseré beige était un reste du thème sombre. Encre pleine sur
+ * --accent-dim : 13 à 14:1 selon le programme.
+ */
 .note {
   margin-top: 10px;
   padding: 10px 12px;
   border-radius: var(--radius-sm);
-  background: var(--grad-surface, var(--surface));
-  border-left: 3px solid var(--line);
+  background: var(--accent-dim);
   font-size: var(--fs-small);
-  color: var(--ink-2);
+  color: var(--ink);
 }
 
 /* ------------------------------------------------------------ sections -- */
@@ -2458,10 +2468,12 @@
 
 /* ===================================================================== */
 /*
- * SÉANCE MASS — d'après la référence de Guillaume (14 novembre), mesurée sur
- * sa capture d'iPhone (849 px = 402 px CSS). Tout est sous le thème MASS ET
- * sous `.ecranSeance` : POWER, FEMMES et le combiné MASS, qui partagent ces
- * classes, ne voient rien.
+ * BANDEAU DE SÉANCE MASS — d'après la référence de Guillaume (14 novembre),
+ * mesurée sur sa capture d'iPhone (849 px = 402 px CSS). Seul l'EN-TÊTE est
+ * propre à MASS : le reste de la séance est celui de POWER (lot 3, DA claire).
+ * Guillaume a gardé les anciens bandeaux (21 novembre, « tout comme avant »).
+ * Tout est sous le thème MASS ET sous `.ecranSeance` : POWER, FEMMES et le
+ * combiné MASS, qui partagent ces classes, ne voient rien.
  *
  * Écarts voulus, la référence contredisant une règle de l'app :
  * - les curseurs et le bouton de la fiche gardent 48 px (`--tap`) ;
@@ -2550,6 +2562,14 @@
   font-weight: 700;
 }
 
+/* Une consigne dans l'en-tête sombre : même habit que les pastilles, sinon
+   l'encre blanche de la zone photo tomberait sur l'aplat clair. */
+:global([data-theme='mass']) .ecranSeance .enteteSeance .note {
+  border: 1.5px solid #5c5d5e;
+  background: rgb(0 0 0 / 40%);
+  color: #fff;
+}
+
 /* « DUR » : bord rouge, fond rouge sombre, sans la pastille de couleur. */
 :global([data-theme='mass']) .ecranSeance .enteteSeance .tag {
   border-color: var(--mass-rouge);
@@ -2571,295 +2591,4 @@
     center / contain no-repeat;
   mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 6h16v15H4zM4 10h16M9 3v4M15 3v4M9 15h2M13 15h2M9 18h2'/%3E%3C/svg%3E")
     center / contain no-repeat;
-}
-
-/* L'avancement : texte blanc, filet, cinq segments gris arrondis. */
-:global([data-theme='mass']) .ecranSeance .avancement {
-  padding: 10px 19px 12px;
-  border-bottom: 0;
-}
-
-:global([data-theme='mass']) .ecranSeance .avancementTexte {
-  color: var(--ink);
-  font-size: 0.9375rem;
-  font-weight: 600;
-}
-
-:global([data-theme='mass']) .ecranSeance .avancementBarre {
-  gap: 4px;
-  margin-top: 6px;
-  padding-top: 4px;
-  border-top: 1px solid #47484a;
-}
-
-:global([data-theme='mass']) .ecranSeance .avancementPas {
-  height: 8px;
-  border-radius: 4px;
-  background: var(--surface-3);
-}
-
-/* Démarrer : dégradé rouge profond, halo, italique extra-gras. */
-:global([data-theme='mass']) .ecranSeance .demarrer {
-  width: calc(100% - 28px);
-  height: 50px;
-  margin: 6px 14px 0;
-  border: 1px solid var(--mass-rouge-bord);
-  border-radius: 14px;
-  background: var(--mass-degrade-action);
-  font-family: var(--font-cond);
-  font-size: 1.5rem;
-  font-style: italic;
-  font-weight: 800;
-  letter-spacing: 0.01em;
-  box-shadow:
-    var(--mass-liseret-action),
-    0 0 18px rgb(226 10 17 / 50%);
-}
-
-/* La carte d'exercice. */
-:global([data-theme='mass']) .ecranSeance .exercise {
-  margin: 17px 13px;
-  border: 1px solid var(--mass-carte-bord);
-  border-radius: 14px;
-  background: var(--mass-carte-fond);
-  box-shadow: var(--mass-liseret);
-}
-
-:global([data-theme='mass']) .ecranSeance .exHead {
-  padding: 10px 19px 8px;
-}
-
-:global([data-theme='mass']) .ecranSeance .exRepere {
-  color: var(--ink-2);
-  font-family: var(--font-cond);
-  font-size: 0.9375rem;
-  font-style: italic;
-  font-weight: 800;
-  letter-spacing: 0.06em;
-}
-
-:global([data-theme='mass']) .ecranSeance .exName {
-  color: var(--ink);
-  font-family: var(--font-cond);
-  font-size: 1.5rem;
-  font-style: italic;
-  font-weight: 800;
-  letter-spacing: 0.005em;
-  line-height: 1.1;
-}
-
-/* « 4 × 5 » : gras plein, pas condensé. */
-:global([data-theme='mass']) .ecranSeance .loadLine {
-  margin-top: 6px;
-  font-family: var(--font);
-  font-size: 2.6rem;
-  font-weight: 800;
-  letter-spacing: -0.01em;
-}
-
-:global([data-theme='mass']) .ecranSeance .chargeCible,
-:global([data-theme='mass']) .ecranSeance .chargeCible b,
-:global([data-theme='mass']) .ecranSeance .chargeSource {
-  color: var(--ink-2);
-  font-size: 0.96875rem;
-  line-height: 1.22;
-}
-
-:global([data-theme='mass']) .ecranSeance .chargeCible b,
-:global([data-theme='mass']) .ecranSeance .chargePct {
-  color: var(--ink);
-}
-
-:global([data-theme='mass']) .ecranSeance .chargeSource {
-  margin-top: 0;
-}
-
-/* Vigilance : bordée de rouge, fond teinté, ⓘ rouge à gauche. */
-:global([data-theme='mass']) .ecranSeance .vigilance {
-  position: relative;
-  margin: 12px -5px 0;
-  padding: 8px 14px 8px 52px;
-  border: 1.5px solid var(--mass-rouge);
-  border-radius: 12px;
-  background: var(--accent-dim);
-  color: var(--ink);
-  font-size: 0.96875rem;
-  line-height: 1.22;
-}
-
-:global([data-theme='mass']) .ecranSeance .vigilance::before {
-  content: 'i' / '';
-  position: absolute;
-  top: 50%;
-  left: 16px;
-  display: grid;
-  place-items: center;
-  width: 20px;
-  height: 20px;
-  border: 2px solid var(--mass-rouge);
-  border-radius: 50%;
-  color: var(--mass-rouge);
-  font-family: Georgia, serif;
-  font-size: 13px;
-  font-weight: 700;
-  line-height: 1;
-  transform: translateY(-50%);
-}
-
-:global([data-theme='mass']) .ecranSeance .vigilance b {
-  color: var(--ink);
-}
-
-:global([data-theme='mass']) .ecranSeance .exSub {
-  color: var(--ink);
-  font-size: 0.96875rem;
-}
-
-/* La fiche : photo plus claire, bouton rouge rectangle arrondi. */
-:global([data-theme='mass']) .ecranSeance .fiche {
-  height: 118px;
-  margin: 8px 6px 0;
-  border-radius: 12px;
-}
-
-:global([data-theme='mass']) .ecranSeance .ficheVoile {
-  background: rgb(var(--voile) / 22%);
-}
-
-:global([data-theme='mass']) .ecranSeance .ficheBouton {
-  padding: 0 22px;
-  border: 1px solid var(--mass-rouge-bord);
-  border-radius: 14px;
-  background: var(--mass-degrade-action);
-  font-family: var(--font-cond);
-  font-size: 1.3125rem;
-  font-style: italic;
-  font-weight: 800;
-  letter-spacing: 0.01em;
-  box-shadow:
-    var(--mass-liseret-action),
-    0 0 14px rgb(226 10 17 / 40%);
-}
-
-/* La série en cours : colonne de gauche teintée de rouge, rang rouge. */
-:global([data-theme='mass']) .ecranSeance .setCourante {
-  background: linear-gradient(
-    90deg,
-    rgb(150 10 16 / 38%) 0,
-    rgb(80 6 10 / 30%) 30px,
-    transparent 30px
-  );
-}
-
-:global([data-theme='mass']) .ecranSeance .setCourante .setIndex {
-  color: var(--mass-rouge);
-  font-family: var(--font-cond);
-  font-size: 1.875rem;
-  font-style: italic;
-  font-weight: 800;
-}
-
-/* Les curseurs : libellé blanc, cadre bordé, chiffre en italique extra-gras. */
-:global([data-theme='mass']) .ecranSeance .steppersLigne > div > div:first-child {
-  color: var(--ink-2);
-  font-size: 0.8125rem;
-  font-weight: 700;
-}
-
-:global([data-theme='mass']) .ecranSeance .steppersLigne > div > div:last-child {
-  border: 1px solid var(--mass-curseur-bord);
-  background: var(--mass-curseur-fond);
-}
-
-:global([data-theme='mass']) .ecranSeance .steppersLigne :global(.tnum) {
-  color: var(--ink);
-  font-family: var(--font-cond);
-  font-size: 1.75rem;
-  font-style: italic;
-  font-weight: 800;
-}
-
-/* Boutons de la carte (lot C) : « Valider la série » comme « Démarrer » ;
-   Consignes, Remarque, Documenter, Remplacer, Rep ratée sombres et bordés ;
-   « Ajouter un exercice » au trait rouge plein. */
-:global([data-theme='mass']) .ecranSeance .validate {
-  border: 1px solid var(--mass-rouge-bord);
-  border-radius: 12px;
-  background: var(--mass-degrade-action);
-  font-family: var(--font-cond);
-  font-size: 1.1875rem;
-  font-style: italic;
-  font-weight: 800;
-  text-transform: uppercase;
-  box-shadow:
-    var(--mass-liseret-action),
-    0 0 14px rgb(226 10 17 / 40%);
-}
-
-:global([data-theme='mass']) .ecranSeance .tiroir,
-:global([data-theme='mass']) .ecranSeance .replaceButton,
-:global([data-theme='mass']) .ecranSeance .failToggle,
-:global([data-theme='mass']) .ecranSeance .mediaAction {
-  border: 1px solid var(--mass-sombre-bord);
-  border-radius: 10px;
-  background: var(--mass-sombre-fond);
-  box-shadow: var(--mass-liseret);
-  color: var(--ink);
-}
-
-:global([data-theme='mass']) .ecranSeance .failToggleOn {
-  border-color: var(--mass-rouge-bord);
-  background: var(--mass-degrade-choix);
-}
-
-:global([data-theme='mass']) .ecranSeance .addButton {
-  border: 1.5px solid var(--mass-rouge);
-  border-radius: 12px;
-  background: var(--accent-dim);
-  color: var(--accent-ink);
-}
-
-/* Panneaux et états de la séance (lot D) : cartes anthracite bordées au lieu
-   des filets de couleur à gauche ; champs comme ceux du combiné. */
-:global([data-theme='mass']) .ecranSeance .panel,
-:global([data-theme='mass']) .ecranSeance .mediaPanel,
-:global([data-theme='mass']) .ecranSeance .exNote {
-  border: 1px solid var(--mass-carte-bord);
-  border-radius: 12px;
-  background: var(--mass-carte-fond);
-  box-shadow: var(--mass-liseret);
-}
-
-:global([data-theme='mass']) .ecranSeance .mediaBlock {
-  border: 1px solid var(--mass-carte-bord);
-  border-radius: 10px;
-  background: var(--surface-2);
-}
-
-:global([data-theme='mass']) .ecranSeance .panelTitle,
-:global([data-theme='mass']) .ecranSeance .mediaBlockTitle,
-:global([data-theme='mass']) .ecranSeance .supersetTitle {
-  color: var(--ink);
-  font-family: var(--font-cond);
-  font-style: italic;
-  font-weight: 800;
-  font-size: 1.25rem;
-  letter-spacing: 0.01em;
-  line-height: 1.1;
-}
-
-:global([data-theme='mass']) .ecranSeance .panelSearch,
-:global([data-theme='mass']) .ecranSeance .exNoteField {
-  border: 1px solid var(--mass-curseur-bord);
-  border-radius: 10px;
-  background: var(--mass-champ-fond);
-  color: var(--ink);
-}
-
-/* Le superset garde son cadre rouge (il se repère de loin), sur une carte
-   anthracite. */
-:global([data-theme='mass']) .ecranSeance .superset {
-  border-color: var(--mass-rouge);
-  border-radius: 14px;
-  background: var(--mass-carte-fond);
 }

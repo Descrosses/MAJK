@@ -203,8 +203,8 @@ function CarteTest({
       aria-label={`Test ${rang + 1} : ${test.nom}`}
     >
       <div className={styles.exHead}>
-        <p className={`${styles.exRepere} ${local.repere}`}>Test {rang + 1}</p>
-        <div className={`${styles.exName} ${local.nom}`}>{test.nom}</div>
+        <p className={styles.exRepere}>Test {rang + 1}</p>
+        <div className={styles.exName}>{test.nom}</div>
 
         {/* Ce que l'on sait déjà, pour CE matériel. */}
         <p className={local.etat} role="status">
@@ -267,10 +267,10 @@ function CarteTest({
       )}
 
       <div className={styles.setRow}>
-        <div className={`${styles.setIndex} ${local.rang}`}>{rang + 1}</div>
+        <div className={styles.setIndex}>{rang + 1}</div>
         <div className={styles.fields}>
           <div
-            className={`${styles.steppersLigne} ${local.steppers}`}
+            className={styles.steppersLigne}
             style={{ gridTemplateColumns: `repeat(${modalite === 'direct' ? 1 : 2}, auto)` }}
           >
             <Stepper
@@ -310,7 +310,7 @@ function CarteTest({
           </label>
           <button
             type="button"
-            className={`${styles.validate} ${local.valider}`}
+            className={styles.validate}
             onClick={() => void enregistrer()}
             disabled={!pret || envoi}
           >

@@ -30,8 +30,3 @@
   color: var(--ink-3);
   white-space: nowrap;
 }
-
-/* MASS : titres de carte en italique, comme sur la maquette. */
-:global([data-theme='mass']) .titre {
-  font-style: italic;
-}
