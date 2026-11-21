@@ -124,7 +124,7 @@
 }
 
 :global([data-theme='mass']) .time {
-  font-family: 'Barlow Mass', var(--font-cond);
+  font-family: var(--font-cond);
   font-style: italic;
   font-weight: 800;
 }

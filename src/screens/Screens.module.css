@@ -1640,8 +1640,8 @@
 
 :global([data-theme='mass']) .cardTitle,
 :global([data-theme='mass']) .sectionTitle {
-  color: #fff;
-  font-family: 'Barlow Mass', var(--font-cond);
+  color: var(--ink);
+  font-family: var(--font-cond);
   font-style: italic;
   font-weight: 800;
   letter-spacing: 0.01em;
@@ -1658,7 +1658,7 @@
   border: 1px solid var(--mass-rouge-bord);
   border-radius: 14px;
   background: var(--mass-degrade-action);
-  font-family: 'Barlow Mass', var(--font-cond);
+  font-family: var(--font-cond);
   font-size: 1.3125rem;
   font-style: italic;
   font-weight: 800;
@@ -1671,8 +1671,8 @@
 
 :global([data-theme='mass']) .primary:disabled {
   border-color: var(--mass-curseur-bord);
-  background: #1d1d1e;
-  color: #8a8c90;
+  background: var(--surface-3);
+  color: var(--ink-3);
   box-shadow: none;
 }
 
@@ -1689,7 +1689,7 @@
   border: 1.5px solid var(--orange);
   border-radius: 12px;
   background: color-mix(in srgb, var(--orange) 10%, var(--surface));
-  color: #f0f0f0;
+  color: var(--ink);
 }
 
 :global([data-theme='mass']) .alertRouge {
@@ -1709,7 +1709,7 @@
   border: 1px solid var(--mass-curseur-bord);
   border-radius: 10px;
   background: var(--mass-champ-fond);
-  color: #fff;
+  color: var(--ink);
 }
 
 /* Puces Début / Fin (Mesures) : celles de l'écran Semaine. */
@@ -1721,8 +1721,8 @@
 }
 
 :global([data-theme='mass']) .weekNum {
-  color: #f2f2f2;
-  font-family: 'Barlow Mass', var(--font-cond);
+  color: var(--ink);
+  font-family: var(--font-cond);
   font-style: italic;
   font-weight: 800;
 }
@@ -1747,7 +1747,7 @@
 }
 
 :global([data-theme='mass']) .segmentButton {
-  color: #cfcfcf;
+  color: var(--ink-2);
 }
 
 :global([data-theme='mass']) .segmentOn {

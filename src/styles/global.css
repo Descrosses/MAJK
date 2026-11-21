@@ -15,7 +15,7 @@ html {
    */
   background: var(--grad-fond, var(--bg));
   background-attachment: fixed;
-  color-scheme: dark;
+  color-scheme: light;
 }
 
 body {

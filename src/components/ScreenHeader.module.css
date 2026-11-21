@@ -12,8 +12,20 @@
   flex-direction: column;
   justify-content: flex-end;
   padding: 18px var(--pad) 20px;
-  background: linear-gradient(180deg, var(--bg-2) 0%, var(--bg) 100%);
+  background: rgb(var(--voile));
   isolation: isolate;
+  /*
+   * Zone SOMBRE dans l'appli claire (DA du 21 novembre) : photo ou voile
+   * foncé dessous, donc texte blanc. Les jetons d'encre sont redéfinis ici
+   * plutôt que couleur par couleur : tout ce qui écrit en --ink dans cette
+   * zone passe au blanc d'un coup.
+   */
+  --ink: var(--ink-photo);
+  --ink-2: var(--ink-photo-2);
+  --ink-3: var(--ink-photo-3);
+  --ink-fort: var(--ink-photo);
+  --line-strong: var(--ligne-photo);
+  color: var(--ink);
 }
 
 /*
@@ -224,7 +236,7 @@
   right: 0;
   bottom: 0;
   height: 56px;
-  background: linear-gradient(180deg, rgb(var(--voile) / 0%) 0%, var(--bg) 100%);
+  background: linear-gradient(180deg, rgb(var(--voile) / 0%) 0%, rgb(var(--voile)) 100%);
 }
 
 .yard {
@@ -444,7 +456,7 @@
  * noir de la page, comme sur la référence.
  */
 .argent {
-  background: var(--bg);
+  background: rgb(var(--voile));
 }
 
 .argent .content::before {
@@ -454,7 +466,7 @@
 
 .argent .eyebrow {
   color: #e6e6e6;
-  font-family: 'Barlow Mass', var(--font-cond);
+  font-family: var(--font-cond);
   font-size: 1.0625rem;
   font-style: italic;
   font-weight: 800;
@@ -465,7 +477,7 @@
   width: fit-content;
   margin: 2px 0 0 -4px;
   padding-right: 6px;
-  font-family: 'Barlow Mass', var(--font-cond);
+  font-family: var(--font-cond);
   font-size: 4.3rem;
   letter-spacing: -0.005em;
   font-style: italic;
@@ -548,7 +560,7 @@
 :global([data-theme='mass']) .header:not(.hero) {
   min-height: 0;
   padding: 6px var(--pad) 16px;
-  background: var(--bg);
+  background: rgb(var(--voile));
 }
 
 :global([data-theme='mass']) .header:not(.hero)::after,
@@ -559,7 +571,7 @@
 
 :global([data-theme='mass']) .header:not(.hero) .eyebrow {
   color: #e6e6e6;
-  font-family: 'Barlow Mass', var(--font-cond);
+  font-family: var(--font-cond);
   font-size: 1.0625rem;
   font-style: italic;
   font-weight: 800;
@@ -569,7 +581,7 @@
 :global([data-theme='mass']) .header:not(.hero) .title {
   width: fit-content;
   margin-top: 4px;
-  font-family: 'Barlow Mass', var(--font-cond);
+  font-family: var(--font-cond);
   font-size: 3.1rem;
   font-style: italic;
   font-weight: 800;
@@ -612,7 +624,7 @@
 
 :global([data-theme='mass']) .hero:not(.avecMarque):not(.argent) .eyebrow {
   color: #e6e6e6;
-  font-family: 'Barlow Mass', var(--font-cond);
+  font-family: var(--font-cond);
   font-size: 1.0625rem;
   font-style: italic;
   font-weight: 800;
@@ -621,7 +633,7 @@
 
 :global([data-theme='mass']) .hero:not(.avecMarque):not(.argent) .title {
   width: fit-content;
-  font-family: 'Barlow Mass', var(--font-cond);
+  font-family: var(--font-cond);
   font-size: 3.1rem;
   font-style: italic;
   font-weight: 800;

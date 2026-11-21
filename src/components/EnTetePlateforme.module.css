@@ -71,14 +71,18 @@
   object-fit: contain;
 }
 
-/* Le nom remonte sur le logo : son fond graphite les fait se rejoindre. */
+/*
+ * Le nom passe SOUS le logo. Il remontait dessus (-14 px) quand la page
+ * était graphite, comme le fond du logo : sur la page claire, le texte foncé
+ * chevauchait le bas sombre de l'image et ne se lisait plus.
+ */
 .marque {
   position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 12px;
-  margin: -14px 0 0;
+  margin: 6px 0 0;
 }
 
 .nom {

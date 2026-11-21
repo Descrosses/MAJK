@@ -12,15 +12,15 @@
  * Avant de « corriger » une valeur : rouvrir la planche et mesurer.
  *
  * Rien ici ne peut atteindre POWER ni MASS : les classes sont locales au
- * module, la police « Barlow Femmes » n'est demandée qu'ici, et les jetons
- * `--grad-*` n'existent que sous le thème FEMMES.
+ * module. Depuis la DA claire (21 novembre), FEMMES prend les polices
+ * communes (Oswald, Inter) : plus de famille de police propre.
  */
 
 .page {
-  --f: 'Barlow Femmes', var(--font-cond);
-  --t: 'Barlow Femmes Texte', var(--font);
-  --texte: #f6effc;
-  --filet: rgb(176 110 220 / 60%);
+  --f: var(--font-cond);
+  --t: var(--font);
+  --texte: var(--ink-2);
+  --filet: var(--line);
 
   min-height: 100vh;
   padding-bottom: calc(72px + env(safe-area-inset-bottom));
@@ -241,12 +241,9 @@
 
 .carte {
   border-radius: 14px;
-  border: 2px solid rgb(205 80 220 / 78%);
+  border: 2px solid var(--line);
   background: var(--grad-surface, var(--surface));
-  box-shadow:
-    0 0 14px rgb(215 70 230 / 30%),
-    inset 0 0 16px rgb(215 70 230 / 8%),
-    inset 0 1px 0 rgb(255 255 255 / 8%);
+  box-shadow: var(--shadow-card);
   /* 17 à gauche, 14 à droite : c'est ce qui laisse tenir « …remettre le
      corps » sur la première ligne, comme sur la planche. */
   padding: 10px 11px 10px 17px;
@@ -270,10 +267,8 @@
 
 /* La bordure rose : la carte qui appelle une action. */
 .carteRose {
-  border-color: rgb(252 62 196 / 92%);
-  box-shadow:
-    0 0 16px rgb(252 62 196 / 42%),
-    inset 0 0 18px rgb(252 62 196 / 10%);
+  border-color: var(--accent);
+  box-shadow: var(--shadow-card);
 }
 
 /* La carte d'action de l'accueil : 217 de haut, bouton à 9 px des bords. */
@@ -299,7 +294,7 @@
 .icoRose {
   display: inline-flex;
   color: var(--accent-bright);
-  filter: drop-shadow(0 0 6px rgb(252 62 196 / 55%));
+  filter: none;
 }
 
 /* « Semaine 1 · Réactivation » : 287 px de large. */
@@ -398,7 +393,7 @@
   font-size: 41px;
   line-height: 40px;
   color: var(--ink);
-  text-shadow: 0 0 16px rgb(252 62 196 / 40%);
+  text-shadow: none;
 }
 
 .carteAction .gros {
@@ -420,12 +415,10 @@
   gap: 12px;
   width: 100%;
   min-height: 61px;
-  border: 1.5px solid rgb(255 170 228 / 85%);
+  border: 1.5px solid var(--accent-deep);
   border-radius: 14px;
   background: var(--grad-accent, var(--accent));
-  box-shadow:
-    0 0 18px rgb(247 1 127 / 40%),
-    inset 0 2px 0 rgb(255 255 255 / 22%);
+  box-shadow: var(--shadow-action, 0 6px 16px rgb(176 74 114 / 22%));
   font-family: var(--f);
   font-style: italic;
   font-weight: 800;
@@ -473,10 +466,8 @@
   margin-top: 6px;
   border-radius: 12px;
   border: 2px solid var(--cyan-femmes);
-  background: #201d50;
-  box-shadow:
-    0 0 14px rgb(56 214 239 / 38%),
-    inset 0 0 12px rgb(56 214 239 / 10%);
+  background: var(--surface);
+  box-shadow: none;
   font-family: var(--f);
   font-size: 20px;
   font-weight: 700;
@@ -502,9 +493,9 @@
 /* 81 de haut, texte à 20 du bord gauche. */
 .tuile {
   border-radius: 14px;
-  border: 2px solid rgb(205 80 220 / 70%);
-  background: linear-gradient(to bottom, #3a1a5c 0%, #2d124f 100%);
-  box-shadow: 0 0 12px rgb(215 70 230 / 24%);
+  border: 2px solid var(--line);
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
   padding: 8px 12px 10px 19px;
   text-align: left;
 }
@@ -541,8 +532,8 @@
   height: 44px;
   padding: 0;
   border-radius: 9px;
-  border: 2px solid rgb(84 150 214 / 85%);
-  background: #2e1051;
+  border: 2px solid var(--line-strong);
+  background: var(--surface);
   font-family: var(--f);
   font-weight: 700;
   font-size: 25px;
@@ -551,10 +542,10 @@
 }
 
 .semActive {
-  border-color: rgb(255 170 228 / 90%);
+  border-color: var(--accent);
   background: var(--grad-accent, var(--accent));
   color: var(--ink-on-accent);
-  box-shadow: 0 0 14px rgb(252 62 196 / 55%);
+  box-shadow: 0 6px 16px rgb(176 74 114 / 22%);
 }
 
 /* ------------------------------------------------- bascule maison / salle */
@@ -574,8 +565,8 @@
   gap: 9px;
   min-height: 44px;
   border-radius: 10px;
-  border: 2px solid rgb(84 160 222 / 90%);
-  background: #241055;
+  border: 2px solid var(--line-strong);
+  background: var(--surface);
   font-family: var(--f);
   font-size: 22px;
   font-weight: 700;
@@ -589,12 +580,10 @@
 
 .basculeOn,
 .basculeOnSalle {
-  border-color: rgb(255 170 228 / 90%);
+  border-color: var(--accent);
   background: var(--grad-accent, var(--accent));
   color: var(--ink-on-accent);
-  box-shadow:
-    0 0 14px rgb(252 62 196 / 40%),
-    inset 0 2px 0 rgb(255 255 255 / 22%);
+  box-shadow: 0 6px 16px rgb(176 74 114 / 22%);
 }
 
 /* ------------------------------------------------------ lignes du circuit */
@@ -626,7 +615,7 @@
 .ligne {
   border-radius: 10px;
   border: 1.5px solid var(--filet);
-  background: linear-gradient(to bottom, #3a1a5c 0%, #2f1450 100%);
+  background: var(--surface);
   box-shadow: inset 0 1px 0 rgb(255 255 255 / 6%);
   overflow: hidden;
 }
@@ -662,7 +651,7 @@
 .lignesSerrees .ligneTete {
   border: 1.5px solid var(--filet);
   border-radius: 10px;
-  background: linear-gradient(to bottom, #3a1a5c 0%, #2f1450 100%);
+  background: var(--surface);
   box-shadow: inset 0 1px 0 rgb(255 255 255 / 6%);
 }
 
@@ -679,8 +668,8 @@
   width: 33px;
   height: 33px;
   border-radius: 50%;
-  border: 1.5px solid rgb(190 150 225 / 55%);
-  background: #4a2a68;
+  border: 1.5px solid var(--line);
+  background: var(--accent-dim);
   font-family: var(--f);
   font-weight: 700;
   font-size: 20px;
@@ -727,11 +716,8 @@
   margin: 0;
   padding: 11px 17px 15px 24px;
   border-radius: 14px;
-  border: 2px solid rgb(215 90 225 / 80%);
-  box-shadow:
-    0 0 14px rgb(215 70 230 / 30%),
-    inset 0 0 16px rgb(215 70 230 / 8%),
-    inset 0 1px 0 rgb(255 255 255 / 8%);
+  border: 2px solid var(--line);
+  box-shadow: var(--shadow-card);
   background: var(--grad-surface, var(--surface));
 }
 
@@ -775,7 +761,7 @@
   margin: 10px 0 0 -6px;
   padding: 7px 15px;
   border-radius: 9px;
-  background: #432360;
+  background: var(--surface-2);
   border: 1.5px solid var(--filet);
   font-size: 16.5px;
   line-height: 19px;
@@ -806,13 +792,13 @@
   margin: 0 9px;
   border-radius: 10px;
   border: 1.5px solid var(--filet);
-  background: #2a0a4a;
+  background: var(--surface-2);
   overflow: hidden;
 }
 
 .compteurBtn {
   min-height: 44px;
-  background: #441969;
+  background: var(--surface-3);
   border: 0;
   font-size: 36px;
   font-weight: 500;
@@ -841,8 +827,8 @@
 .ressentiBtn {
   min-height: 46px;
   border-radius: 11px;
-  border: 2px solid rgb(176 110 220 / 70%);
-  background: #2b1248;
+  border: 2px solid var(--line-strong);
+  background: var(--surface);
   font-family: var(--f);
   font-size: 21px;
   font-weight: 700;
@@ -851,12 +837,10 @@
 }
 
 .ressentiOn {
-  border-color: rgb(255 170 228 / 90%);
+  border-color: var(--accent);
   background: var(--grad-accent, var(--accent));
   color: var(--ink-on-accent);
-  box-shadow:
-    0 0 14px rgb(252 62 196 / 40%),
-    inset 0 2px 0 rgb(255 255 255 / 22%);
+  box-shadow: 0 6px 16px rgb(176 74 114 / 22%);
 }
 
 .remarqueLabel {
@@ -875,7 +859,7 @@
   padding: 13px 14px;
   border-radius: 12px;
   border: 1.5px solid var(--filet);
-  background: #1e0839;
+  background: var(--surface);
   color: var(--ink);
   font-size: 16.5px;
   line-height: 20px;
@@ -883,7 +867,7 @@
 }
 
 .remarque::placeholder {
-  color: #e3d3f3;
+  color: var(--ink-2);
 }
 
 /* ------------------------------------------------------- liste des séances */
@@ -898,11 +882,9 @@
   min-height: 56px;
   padding: 4px 9px 4px 17px;
   border-radius: 12px;
-  border: 1.5px solid rgb(252 62 196 / 75%);
-  background: linear-gradient(to bottom, #3a1a5c 0%, #2f1450 100%);
-  box-shadow:
-    inset 2px 0 0 var(--accent-bright),
-    0 0 10px rgb(252 62 196 / 16%);
+  border: 1.5px solid var(--accent);
+  background: var(--surface);
+  box-shadow: inset 2px 0 0 var(--accent-bright);
   text-align: left;
   color: inherit;
   cursor: pointer;
@@ -930,7 +912,7 @@
   margin-top: 1px;
   font-size: 15.5px;
   line-height: 18px;
-  color: #e3d3f3;
+  color: var(--ink-2);
 }
 
 /* « À faire » : contour et texte roses. « Prévue » : verts. 27 de haut. */
@@ -968,8 +950,8 @@
   bottom: 0;
   display: flex;
   padding: 0 6px env(safe-area-inset-bottom);
-  background: rgb(36 10 70 / 97%);
-  border-top: 1px solid rgb(176 110 220 / 45%);
+  background: rgb(255 255 255 / 97%);
+  border-top: 1px solid var(--line);
   backdrop-filter: blur(10px);
   z-index: 20;
 }
@@ -991,7 +973,7 @@
   font-size: 11px;
   font-weight: 500;
   letter-spacing: -0.02em;
-  color: #f3eafb;
+  color: var(--ink-2);
   position: relative;
   cursor: pointer;
 }
@@ -1015,7 +997,7 @@
   margin-left: -16px;
   border-radius: 3px;
   background: var(--accent-bright);
-  box-shadow: 0 0 8px rgb(252 62 196 / 70%);
+  box-shadow: none;
 }
 
 /* ------------------------------------------------ séances faites, profil */
@@ -1024,7 +1006,7 @@
 .etatFaite {
   border-color: var(--vert);
   background: var(--vert);
-  color: #160a26;
+  color: #fff;
 }
 
 /* Une carte qui se choisit (niveau). Le bouton garde la carte telle quelle. */
@@ -1039,7 +1021,7 @@
 
 .choixOn {
   border-color: var(--accent-bright);
-  box-shadow: 0 0 14px rgb(252 62 196 / 35%);
+  box-shadow: 0 6px 16px rgb(176 74 114 / 22%);
 }
 
 /* Oui / Non : deux boutons du même gabarit que le ressenti. */
@@ -1058,8 +1040,8 @@
 /* « Non faite » : passée sans être faite. Gris, jamais vert — ce n'est pas
    une réussite, et ce n'est pas une faute non plus. */
 .etatSautee {
-  border-color: rgb(255 255 255 / 35%);
-  color: rgb(255 255 255 / 70%);
+  border-color: var(--line-strong);
+  color: var(--ink-3);
 }
 
 /* -------------------------------------- séance façon POWER (SeanceFemmes) */
