@@ -1936,7 +1936,7 @@
   margin: var(--gap) var(--pad) 0;
   height: 60px;
   border-radius: var(--radius);
-  /* FEMMES donne un dégradé vertical ; les autres thèmes gardent l'aplat. */
+  /* Un aplat pour tous les programmes (FEMMES a perdu son dégradé au lot 4). */
   background: var(--grad-accent, var(--accent));
   color: var(--ink-on-accent);
   font-family: var(--font-cond);

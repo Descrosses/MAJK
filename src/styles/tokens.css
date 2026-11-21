@@ -299,9 +299,9 @@
  *
  * Historique : thème synthwave (nuit violette, néon magenta), tiré des
  * maquettes de Guillaume. Remplacé le 21 novembre par la DA claire unique :
- * FEMMES garde un accent ROSE sur la base claire commune. Les dégradés de
- * fond, de carte et le fondu du bandeau sont retirés : sur fond clair, les
- * replis plats (`var(--grad-x, <valeur plate>)`) suffisent.
+ * FEMMES garde un accent ROSE sur la base claire commune, et rien d'autre
+ * sous son bandeau (« la même DA pour chaque programme, juste les couleurs
+ * changent »). Le bandeau, lui, reste comme avant (Femmes.module.css).
  *
  * Blanc sur --accent : 5,2. Texte rose : --accent-ink, 7,0 sur le fond.
  */
@@ -330,16 +330,16 @@
   --accent-ink: #8e3159;
   --accent-ink-fort: #8e3159;
 
-  /* Le bleu-vert des commandes secondaires : 6,2:1 sur le fond. */
-  --cyan-femmes: #0b6379;
-
   --ink-fort: #1f2327;
   --voile: 90 31 58;
   --ombre-titre: 0 1px 8px rgb(0 0 0 / 55%);
 
-  /* Seul dégradé gardé : le bouton d'action, rose vertical discret. */
-
-  --grad-accent: linear-gradient(to bottom, #c45a86 0%, #b04a72 100%);
+  /*
+   * Lot 4 (21 novembre) : plus de dégradé propre ni de bleu-vert pour les
+   * commandes secondaires — FEMMES prend les pièces de POWER, en rose.
+   * L'ombre du bouton d'action est rose (celle de la base est cobalt).
+   */
+  --shadow-action: 0 8px 20px rgb(176 74 114 / 30%);
 }
 
 /*
