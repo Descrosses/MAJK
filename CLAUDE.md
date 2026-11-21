@@ -26,15 +26,20 @@ en IA. **Réponds toujours en français.**
 > `--ink-photo*`. Contrastes : `styles/themesClairs.test.ts`.
 >
 > **« La même DA pour chaque programme, juste les couleurs changent »**
-> (Guillaume, 21 novembre, lot 3). MASS n'a PLUS AUCUN style propre : plus de
-> règle `[data-theme='mass']` hors `tokens.css`, plus de jeton `--mass-*`,
-> plus de titre argent, de « // », de dégradé ni de lueur, plus de marque
-> « MASS » ni d'en-tête permanent à l'Accueil, plus de photo sur la Séance ni
-> le Combiné (comme POWER). Les photos d'en-tête des autres écrans restent :
-> ce sont des images, posées dans les en-têtes de POWER. Rouge MASS :
-> `#c8312f` (le vif `#d71f26` était « clinquant », `#b94a48` « terne »).
-> Garde-fou : `styles/memeDaPourTous.test.ts`. Le point 9 de la section MASS
-> plus bas est de l'HISTORIQUE. FEMMES suivra la même règle (lot à venir).
+> (Guillaume, 21 novembre, lot 3). MASS n'a PLUS de style propre SOUS ses
+> en-têtes : cartes, boutons, champs, sélecteurs, semaines, Progrès, barre de
+> repos sont ceux de POWER (plus de dégradé, de lueur ni d'italique). Rouge
+> MASS : `#c8312f` (le vif `#d71f26` était « clinquant », `#b94a48` « terne »).
+> **Exception voulue par Guillaume, le même soir : les BANDEAUX MASS restent
+> « tout comme avant »** — en-têtes à photo, titre argent, « // », marque
+> « MASS » et en-tête permanent de l'Accueil, variante `argent` de Semaine,
+> photo de la Séance et du Combiné, encadrés sombres du Combiné, blocage du
+> rebond iOS. Leur rouge reste `--mass-rouge: #d71f26`. Seuls 4 jetons
+> `--mass-*` survivent (argent, ombre-titre, halo-trait, rouge). Garde-fou :
+> `styles/memeDaPourTous.test.ts` (une règle MASS ne vit que dans un
+> en-tête). Dans le point 9 de la section MASS plus bas, seul ce qui touche
+> aux en-têtes est encore vrai ; le reste est de l'HISTORIQUE. FEMMES suivra
+> la même règle (lot à venir).
 > Lot 2 : pastilles à bord décoratif, consignes en aplat `--accent-dim`,
 > sélecteur bordé avec « + » à l'accent (`styles/composantsClairs.test.ts`).
 

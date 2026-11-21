@@ -2432,3 +2432,163 @@
   font-weight: 600;
   line-height: 1.45;
 }
+
+/* MASS : même « // » rouge que les en-têtes (ScreenHeader.module.css). */
+:global([data-theme='mass']) .title::after {
+  content: '\00a0//' / '';
+  color: var(--accent-bright);
+}
+
+/*
+ * MASS : la photo d'en-tête des maquettes de Guillaume (14 novembre), sur la
+ * séance et le combiné. Sujet à droite, titre à gauche : le masque l'éteint
+ * vers la gauche (là où passe le titre) et vers le bas (là où passent les
+ * pastilles), sans arête. Elle vit SOUS le texte (`z-index: -1`, l'en-tête
+ * étant son propre contexte d'empilement).
+ */
+.header:has(.enteteFond) {
+  isolation: isolate;
+}
+
+.enteteFond {
+  inset: 0 0 auto auto;
+  width: 100%;
+  height: 176px;
+  z-index: -1;
+  opacity: 1;
+  -webkit-mask-image:
+    linear-gradient(90deg, transparent 0%, rgb(0 0 0 / 28%) 40%, rgb(0 0 0 / 62%) 100%),
+    linear-gradient(180deg, #000 0%, #000 55%, transparent 100%);
+  -webkit-mask-composite: source-in;
+  mask-image:
+    linear-gradient(90deg, transparent 0%, rgb(0 0 0 / 28%) 40%, rgb(0 0 0 / 62%) 100%),
+    linear-gradient(180deg, #000 0%, #000 55%, transparent 100%);
+  mask-composite: intersect;
+}
+
+/* ===================================================================== */
+/*
+ * BANDEAU DE SÉANCE MASS — d'après la référence de Guillaume (14 novembre),
+ * mesurée sur sa capture d'iPhone (849 px = 402 px CSS). Seul l'EN-TÊTE est
+ * propre à MASS : le reste de la séance est celui de POWER (lot 3, DA claire).
+ * Guillaume a gardé les anciens bandeaux (21 novembre, « tout comme avant »).
+ * Tout est sous le thème MASS ET sous `.ecranSeance` : POWER, FEMMES et le
+ * combiné MASS, qui partagent ces classes, ne voient rien.
+ *
+ * Écarts voulus, la référence contredisant une règle de l'app :
+ * - les curseurs et le bouton de la fiche gardent 48 px (`--tap`) ;
+ * - le retour « Semaine 1 » garde sa zone de 48 px ; elle mord de 12 px sur
+ *   la barre d'état pour que le texte tombe où la référence le pose.
+ */
+
+/* La photo passe sous la barre d'état, comme sur la référence. */
+:global([data-theme='mass']) .ecranSeance .enteteSeance {
+  --haut-ecran: env(safe-area-inset-top, 0px);
+  isolation: isolate;
+  margin-top: calc(-1 * var(--haut-ecran));
+  /* Le contenu commence SOUS la barre d'état : collé à l'heure, le retour
+     « Semaine 1 » tombait dans la zone qu'iOS assombrit (vidéo de Guillaume,
+     15 novembre). La photo, elle, reste sous l'heure. */
+  padding: calc(var(--haut-ecran) + 10px) 19px 14px;
+  border-bottom: 0;
+  /* Zone sombre dans l'appli claire : la photo s'efface dans le voile MASS,
+     pas dans la page crème, et l'encre passe au blanc. */
+  background: rgb(var(--voile));
+  --ink: var(--ink-photo);
+  --ink-2: var(--ink-photo-2);
+  --ink-3: var(--ink-photo-3);
+}
+
+:global([data-theme='mass']) .ecranSeance .enteteSeance .enteteFond {
+  height: calc(250px + var(--haut-ecran) * 0.5);
+  -webkit-mask-image:
+    linear-gradient(90deg, rgb(0 0 0 / 55%) 0%, rgb(0 0 0 / 75%) 45%, #000 80%),
+    linear-gradient(180deg, #000 0%, #000 55%, transparent 100%);
+  mask-image:
+    linear-gradient(90deg, rgb(0 0 0 / 55%) 0%, rgb(0 0 0 / 75%) 45%, #000 80%),
+    linear-gradient(180deg, #000 0%, #000 55%, transparent 100%);
+}
+
+:global([data-theme='mass']) .ecranSeance .enteteSeance .back {
+  margin-left: -6px;
+  color: #f2f2f2;
+  font-family: var(--font-cond);
+  font-size: 1.125rem;
+  font-style: italic;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+}
+
+/* Titre argent, vrai italique extra-gras ; le « // » rouge reste. */
+:global([data-theme='mass']) .ecranSeance .enteteSeance .title {
+  width: fit-content;
+  margin-top: 0;
+  font-family: var(--font-cond);
+  font-size: 3.1rem;
+  font-style: italic;
+  font-weight: 800;
+  line-height: 0.95;
+  transform: none;
+  background: var(--mass-argent) 0 0 / 100% 0.95em repeat-y;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: var(--mass-ombre-titre);
+}
+
+/* La référence n'a pas de trait sous le titre de séance. */
+:global([data-theme='mass']) .ecranSeance .enteteSeance .titleRule {
+  display: none;
+}
+
+/* Les pastilles : plus grandes, bord gris, texte blanc gras. */
+:global([data-theme='mass']) .ecranSeance .enteteSeance .meta {
+  gap: 8px 6px;
+  margin-top: 14px;
+}
+
+:global([data-theme='mass']) .ecranSeance .enteteSeance .metaItem {
+  gap: 6px;
+  min-height: 30px;
+  padding: 0 11px;
+  border: 1.5px solid #5c5d5e;
+  background: rgb(0 0 0 / 40%);
+  color: #fff;
+  font-size: 0.90625rem;
+  font-weight: 700;
+}
+
+:global([data-theme='mass']) .ecranSeance .enteteSeance .metaItem b {
+  font-weight: 700;
+}
+
+/* Une consigne dans l'en-tête sombre : même habit que les pastilles, sinon
+   l'encre blanche de la zone photo tomberait sur l'aplat clair. */
+:global([data-theme='mass']) .ecranSeance .enteteSeance .note {
+  border: 1.5px solid #5c5d5e;
+  background: rgb(0 0 0 / 40%);
+  color: #fff;
+}
+
+/* « DUR » : bord rouge, fond rouge sombre, sans la pastille de couleur. */
+:global([data-theme='mass']) .ecranSeance .enteteSeance .tag {
+  border-color: var(--mass-rouge);
+  background: linear-gradient(180deg, rgb(160 12 20 / 45%) 0%, rgb(90 6 10 / 45%) 100%);
+}
+
+:global([data-theme='mass']) .ecranSeance .enteteSeance .tag::before {
+  content: none;
+}
+
+/* Le calendrier devant la date. Décoratif. */
+:global([data-theme='mass']) .ecranSeance .metaDate::before {
+  content: '';
+  flex: none;
+  width: 16px;
+  height: 16px;
+  background: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 6h16v15H4zM4 10h16M9 3v4M15 3v4M9 15h2M13 15h2M9 18h2'/%3E%3C/svg%3E")
+    center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 6h16v15H4zM4 10h16M9 3v4M15 3v4M9 15h2M13 15h2M9 18h2'/%3E%3C/svg%3E")
+    center / contain no-repeat;
+}

@@ -340,6 +340,194 @@
 }
 
 /*
+ * MASS : le « // » rouge après le titre, relevé dans les maquettes de
+ * Guillaume (14 novembre). Décoratif : masqué aux lecteurs d'écran par
+ * `content … / ""`, et réservé au thème MASS.
+ */
+:global([data-theme='mass']) .title::after {
+  content: '\00a0//' / '';
+  color: var(--accent-bright);
+}
+
+/*
+ * La marque : « MASS // » en argent, très gros, au-dessus du titre du jour.
+ * Relevé sur la maquette de l'Accueil : capitales de 50 px de haut (corps
+ * ≈ 72 px), dégradé du blanc #f3f4f5 au gris #878887. Le « // » passe du
+ * titre à la marque. L'ombre est un `drop-shadow` : un `text-shadow` se
+ * peindrait PAR-DESSUS un dégradé découpé dans le texte.
+ */
+.marque {
+  width: fit-content;
+  margin: 4px 0 2px;
+  font-family: var(--font-cond);
+  font-size: clamp(3.5rem, 18vw, 4.5rem);
+  font-weight: 700;
+  line-height: 0.9;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+  transform: skewX(-8deg);
+  transform-origin: left bottom;
+  background: linear-gradient(180deg, #f3f4f5 0%, #d6d7d8 42%, #878887 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 2px 6px rgb(0 0 0 / 55%));
+}
+
+.marque::after {
+  content: '\00a0//' / '';
+  color: var(--accent-bright);
+}
+
+/* Le titre du jour, en seconde ligne : 22 px de capitales sur la maquette. */
+.title.titreSecond {
+  max-width: 74%;
+  font-size: clamp(1.75rem, 8.2vw, 2.0625rem);
+  line-height: 1.02;
+  color: #e3e4e6;
+}
+
+:global([data-theme='mass']) .title.titreSecond::after {
+  content: none;
+}
+
+/*
+ * MASS : les photos des maquettes ont leur sujet À DROITE et du noir à
+ * gauche. Le voile vertical de POWER (fait pour un stade éclairé sur toute
+ * la largeur) éteindrait l'athlète derrière le titre ; ici le voile du texte
+ * est HORIZONTAL — opaque à gauche sous le titre, transparent à droite sur
+ * le sujet. Les lignes de terrain, décor de POWER, n'ont rien à faire sur
+ * une photo de salle.
+ */
+:global([data-theme='mass']) .hero .content::before {
+  background: linear-gradient(
+    90deg,
+    rgb(var(--voile) / 86%) 0%,
+    rgb(var(--voile) / 68%) 50%,
+    rgb(var(--voile) / 0%) 88%
+  );
+}
+
+:global([data-theme='mass']) .hero .voile {
+  background: linear-gradient(
+    180deg,
+    rgb(var(--voile) / 0%) 0%,
+    rgb(var(--voile) / 8%) 60%,
+    rgb(var(--voile) / 30%) 100%
+  );
+}
+
+:global([data-theme='mass']) .hero .yard,
+:global([data-theme='mass']) .hero .lueur {
+  display: none;
+}
+
+/*
+ * Le voile général de l'en-tête (35 → 78 %) est réglé pour des projecteurs
+ * de stade. Ces photos-ci sont déjà presque noires : sous lui, l'athlète
+ * disparaissait. Il ne garde que le raccord du bas.
+ */
+:global([data-theme='mass']) .hero::after {
+  background: linear-gradient(180deg, rgb(var(--voile) / 0%) 55%, rgb(var(--voile) / 40%) 100%);
+}
+
+/*
+ * Variante « argent » : l'écran Semaine MASS, relevé sur la référence de
+ * Guillaume (capture d'iPhone, 1 px de référence = 1,336 px CSS).
+ *
+ * - La photo passe sous la barre d'état, comme sur la référence : l'en-tête
+ *   remonte de la zone de sécurité et la rend en rembourrage. Hors iPhone
+ *   (zone nulle), rien ne bouge.
+ * - Titre : capitales de 47 px, vrai italique extra-gras, argent — blanc
+ *   en haut, une cassure grise sous le milieu, comme un métal poli. Pas de
+ *   « // » ici.
+ * - Sous le titre, un trait rouge de 3 px qui s'éteint vers la droite.
+ */
+.argent {
+  --haut-ecran: env(safe-area-inset-top, 0px);
+  min-height: calc(202px + var(--haut-ecran));
+  margin-top: calc(-1 * var(--haut-ecran));
+  padding: calc(18px + var(--haut-ecran)) 22px 8px;
+}
+
+/*
+ * Le voile du texte (horizontal sur MASS) s'arrêtait sur une arête nette en
+ * travers de la photo : il naît ici en fondu. Le haut de l'en-tête est le
+ * noir de la page, comme sur la référence.
+ */
+.argent {
+  background: rgb(var(--voile));
+}
+
+.argent .content::before {
+  -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 48px);
+  mask-image: linear-gradient(180deg, transparent 0, #000 48px);
+}
+
+.argent .eyebrow {
+  color: #e6e6e6;
+  font-family: var(--font-cond);
+  font-size: 1.0625rem;
+  font-style: italic;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+}
+
+.argent .title {
+  width: fit-content;
+  margin: 2px 0 0 -4px;
+  padding-right: 6px;
+  font-family: var(--font-cond);
+  font-size: 4.3rem;
+  letter-spacing: -0.005em;
+  font-style: italic;
+  font-weight: 800;
+  line-height: 0.9;
+  transform: none;
+  background: var(--mass-argent);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  text-shadow: none;
+  filter: var(--mass-ombre-titre);
+}
+
+/*
+ * La photo, à la place et à l'échelle de la référence : le disque y fait
+ * ≈ 215 px de diamètre, moyeu vers (262, 155) depuis le haut de l'écran.
+ * La photo (2:1) fait donc 446 × 223 ; son bord haut est fondu. Le bas reste
+ * fondu dans le noir par le voile de l'en-tête.
+ */
+.argent .fond {
+  inset: auto;
+  top: calc(var(--haut-ecran) - 21px);
+  /* Calée sur le bord DROIT : à gauche, un grand iPhone (430 px) laissait
+     une bande noire et une arête nette à droite de la photo. */
+  right: -19px;
+  width: 446px;
+  height: 223px;
+  -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 36px);
+  mask-image: linear-gradient(180deg, transparent 0, #000 36px);
+}
+
+:global([data-theme='mass']) .argent .title::after {
+  content: none;
+}
+
+.argent .subtitleRow {
+  margin-top: 14px;
+}
+
+.argent .subtitleRow::before {
+  content: '';
+  width: 108px;
+  height: 3px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, #e3141c 0%, #e3141c 52%, rgb(227 20 28 / 0%) 100%);
+  box-shadow: var(--mass-halo-trait);
+}
+
+/*
  * POWER — les trois bandeaux du 14 novembre (Nutrition, Combine, Semaine) un
  * peu plus présents : le voile général (35 → 78 %), réglé pour un stade
  * éclairé, les effaçait trop (retour de Guillaume). Ces photos sont déjà
@@ -350,4 +538,167 @@
 .hero[data-visuel='combinePower']::after,
 .hero[data-visuel='semainePower']::after {
   background: linear-gradient(180deg, rgb(var(--voile) / 15%) 0%, rgb(var(--voile) / 62%) 100%);
+}
+
+/* ===================================================================== */
+/*
+ * MASS — en-têtes SANS photo (porte de MASS FORCE, Progrès, Nutrition,
+ * Mesures, Réglages). Harmonisation validée par Guillaume (audit du
+ * 14 novembre), à partir des écrans validés :
+ *
+ * - plus de décor de POWER : ni halo de stade bleuté, ni lignes de terrain ;
+ *   le fond est le noir de la page ;
+ * - compact, comme le Combiné : le titre monte sous la barre d'état au lieu
+ *   d'attendre au bas d'un bandeau de 196 px resté vide sans photo ;
+ * - sur-titre et titre comme la Séance : vrai italique extra-gras, titre
+ *   argent. Le « // » rouge reste (règle MASS des titres) ;
+ * - la ligne de sous-titre entre deux traits rouges est celle, validée, de
+ *   l'Accueil.
+ *
+ * `:not(.hero)` : les en-têtes à photo (Accueil, Semaine) ont leurs règles.
+ */
+:global([data-theme='mass']) .header:not(.hero) {
+  min-height: 0;
+  padding: 6px var(--pad) 16px;
+  background: rgb(var(--voile));
+}
+
+:global([data-theme='mass']) .header:not(.hero)::after,
+:global([data-theme='mass']) .header:not(.hero) .lueur,
+:global([data-theme='mass']) .header:not(.hero) .yard {
+  display: none;
+}
+
+:global([data-theme='mass']) .header:not(.hero) .eyebrow {
+  color: #e6e6e6;
+  font-family: var(--font-cond);
+  font-size: 1.0625rem;
+  font-style: italic;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+
+:global([data-theme='mass']) .header:not(.hero) .title {
+  width: fit-content;
+  margin-top: 4px;
+  font-family: var(--font-cond);
+  font-size: 3.1rem;
+  font-style: italic;
+  font-weight: 800;
+  line-height: 0.95;
+  transform: none;
+  background: var(--mass-argent) 0 0 / 100% 0.95em repeat-y;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  text-shadow: none;
+  filter: var(--mass-ombre-titre);
+}
+
+/*
+ * MASS — l'Accueil fait passer sa photo sous la barre d'état, comme
+ * Semaine, Combiné et Séance (décision de Guillaume, audit du 14 novembre).
+ * L'en-tête remonte de la zone de sécurité et la rend en rembourrage : le
+ * texte ne bouge pas, seule la photo gagne le haut de l'écran.
+ */
+:global([data-theme='mass']) .avecMarque {
+  --haut-ecran: env(safe-area-inset-top, 0px);
+  min-height: calc(196px + var(--haut-ecran));
+  margin-top: calc(-1 * var(--haut-ecran));
+  padding-top: calc(18px + var(--haut-ecran));
+}
+
+/*
+ * MASS — en-têtes À photo hors Accueil et Semaine (bandeaux du 14 novembre :
+ * Nutrition, Progrès, Mesures, Réglages, et les onglets « à venir » de MASS
+ * FORCE). Même titre que les en-têtes MASS sans photo (argent, vrai italique
+ * extra-gras), et la photo passe sous la barre d'état comme sur l'Accueil.
+ * L'Accueil (`.avecMarque`) et la Semaine (`.argent`) gardent leurs règles.
+ */
+:global([data-theme='mass']) .hero:not(.avecMarque):not(.argent) {
+  --haut-ecran: env(safe-area-inset-top, 0px);
+  min-height: calc(196px + var(--haut-ecran));
+  margin-top: calc(-1 * var(--haut-ecran));
+  padding-top: calc(18px + var(--haut-ecran));
+}
+
+:global([data-theme='mass']) .hero:not(.avecMarque):not(.argent) .eyebrow {
+  color: #e6e6e6;
+  font-family: var(--font-cond);
+  font-size: 1.0625rem;
+  font-style: italic;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+
+:global([data-theme='mass']) .hero:not(.avecMarque):not(.argent) .title {
+  width: fit-content;
+  font-family: var(--font-cond);
+  font-size: 3.1rem;
+  font-style: italic;
+  font-weight: 800;
+  line-height: 0.95;
+  transform: none;
+  background: var(--mass-argent) 0 0 / 100% 0.95em repeat-y;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  text-shadow: none;
+  filter: var(--mass-ombre-titre);
+}
+
+/*
+ * MASS — retours de Guillaume du 15 novembre (captures d'iPhone).
+ *
+ * 1. Un seul trait rouge sous le titre, celui de Semaine et du Combiné :
+ *    court, il s'éteint vers la droite. Plus de ligne de sous-titre entre
+ *    deux traits ; le sous-titre (« Semaine 1 / 4 », « Contenu à venir »…)
+ *    reste, en dessous du trait.
+ */
+:global([data-theme='mass']) .header:not(.argent) .ruleLeft,
+:global([data-theme='mass']) .header:not(.argent) .ruleRight {
+  display: none;
+}
+
+:global([data-theme='mass']) .header:not(.argent) .subtitleRow {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+:global([data-theme='mass']) .header:not(.argent) .subtitleRow::before {
+  content: '';
+  flex: none;
+  width: 108px;
+  height: 3px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, #e3141c 0%, #e3141c 52%, rgb(227 20 28 / 0%) 100%);
+  box-shadow: var(--mass-halo-trait);
+}
+
+/*
+ * 2. Le voile du titre s'arrêtait sur une arête nette au milieu de la photo
+ *    (« un film noir sur 60-70 % du bandeau ») : il naît désormais en fondu.
+ *    Semaine (`.argent`) a déjà le sien.
+ */
+:global([data-theme='mass']) .hero:not(.argent) .content::before {
+  /* Le fondu tient dans les 40 px AU-DESSUS du texte : le titre garde tout
+     son voile (contraste mesuré ≥ 4:1). */
+  -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 40px);
+  mask-image: linear-gradient(180deg, transparent 0, #000 40px);
+}
+
+/*
+ * 3. Accueil : la tête de l'athlète est tout en haut de la photo. Posée dès
+ *    le haut de l'écran, elle passait sous l'heure et le visage était coupé.
+ *    La photo commence sous la barre d'état ; son haut, déjà noir, se fond
+ *    dans le fond de page.
+ */
+:global([data-theme='mass']) .avecMarque .fond {
+  inset: auto 0 0 0;
+  top: var(--haut-ecran, 0px);
+  height: calc(100% - var(--haut-ecran, 0px));
+  -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 22px);
+  mask-image: linear-gradient(180deg, transparent 0, #000 22px);
 }

@@ -353,9 +353,12 @@
 }
 
 /*
- * Encres des zones SOMBRES, communes à tous les thèmes. Les jetons `--mass-*`
- * qui vivaient ici ont été retirés le 21 novembre avec la couche de style
- * propre à MASS : MASS utilise désormais les jetons de la base.
+ * Encres des zones SOMBRES, communes à tous les thèmes, et les quatre jetons
+ * des BANDEAUX MASS. Le 21 novembre (lot 3), MASS a perdu tout style propre
+ * SAUF ses bandeaux, que Guillaume a gardés « tout comme avant » : titre
+ * argent, ombre, trait, rouge d'origine. Déclarés sur `:root` : le combiné
+ * MASS s'ouvre aussi depuis le catalogue, sous le thème de la plateforme.
+ * Les autres jetons `--mass-*` (cartes, boutons, champs) sont retirés.
  */
 :root {
   /*
@@ -367,4 +370,10 @@
   --ink-photo-2: rgb(255 255 255 / 86%);
   --ink-photo-3: rgb(255 255 255 / 78%);
   --ligne-photo: rgb(255 255 255 / 55%);
+
+  /* Bandeaux MASS : titre argent poli, ombre portée, halo du trait, rouge. */
+  --mass-argent: linear-gradient(180deg, #ffffff 0%, #f1f1f1 44%, #a3a4a5 56%, #c9cacb 100%);
+  --mass-ombre-titre: drop-shadow(0 2px 6px rgb(0 0 0 / 60%));
+  --mass-halo-trait: 0 0 0 transparent;
+  --mass-rouge: #d71f26;
 }

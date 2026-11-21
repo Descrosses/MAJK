@@ -443,3 +443,24 @@
   color: var(--ink-2);
   font-size: var(--fs-small);
 }
+
+/*
+ * Le titre du jour, quand l'en-tête est permanent (MASS) : « Ça commence
+ * bientôt », le nom de la séance, « Repos ». Il ouvre la zone d'information,
+ * sous l'en-tête, à la taille d'un titre de carte — plus celle d'une affiche.
+ */
+.titreJour {
+  margin: 2px 0 0;
+  color: var(--ink);
+  font-family: var(--font-cond);
+  font-size: 1.375rem;
+  font-weight: 700;
+  font-style: italic;
+  letter-spacing: 0.02em;
+  line-height: 1.1;
+  text-transform: uppercase;
+}
+
+.titreJour + .lead {
+  margin-top: 4px;
+}

@@ -47,6 +47,12 @@ describe('consigne de séance : aplat d’accent, sans liseré', () => {
     expect(r).toContain('color: var(--ink)');
     expect(r).not.toContain('border-left');
   });
+
+  it('dans l’en-tête sombre de MASS, la consigne garde un fond foncé', () => {
+    const r = regle(SEANCE, ":global([data-theme='mass']) .ecranSeance .enteteSeance .note");
+    expect(r).toContain('color: #fff');
+    expect(r).toMatch(/background: rgb\(0 0 0/);
+  });
 });
 
 describe('sélecteur numérique : un contrôle', () => {

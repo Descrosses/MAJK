@@ -1,14 +1,20 @@
 /**
  * « La même DA pour chaque programme, juste les couleurs changent. »
  * Décision de Guillaume, 21 novembre — elle renverse les identités MASS du
- * 14 et du 15 novembre (en-têtes argent, « // », dégradés et lueurs rouges).
+ * 14 et du 15 novembre (cartes, boutons, champs, dégradés et lueurs rouges).
+ * UNE exception, voulue par Guillaume le même soir : les BANDEAUX MASS
+ * (en-têtes à photo, titre argent, « // », marque de l'Accueil, photo de la
+ * Séance et du Combiné) restent « tout comme avant ».
  *
  * Ce que ce test fige :
- * - aucune feuille de style ne vise `[data-theme='mass']`, hors `tokens.css` ;
+ * - une règle `[data-theme='mass']` ne vit que dans un EN-TÊTE :
+ *   `ScreenHeader.module.css`, l'en-tête de séance (`.enteteSeance`, la date
+ *   `.metaDate`, le « // » du titre) et le blocage du rebond (`global.css`) ;
  * - dans `tokens.css`, le bloc MASS ne déclare que des COULEURS et des ombres
  *   (les jetons que chaque thème redéfinit), jamais une taille, une police ou
  *   un rayon ;
- * - plus aucun jeton `--mass-*` n'existe, nulle part ;
+ * - seuls les quatre jetons des bandeaux existent : `--mass-argent`,
+ *   `--mass-ombre-titre`, `--mass-halo-trait`, `--mass-rouge` ;
  * - le rouge MASS est #c8312f (choisi par Guillaume entre le vif #d71f26,
  *   « clinquant », et #b94a48, « terne »).
  *
@@ -35,16 +41,43 @@ const BLOC_MASS = (() => {
 })();
 
 describe('MASS = POWER, seul l’accent change', () => {
-  it('aucune feuille de style ne vise le thème MASS, hors jetons', () => {
-    const fautifs = CSS.filter((f) => !f.endsWith('tokens.css')).filter((f) =>
-      /data-theme=['"]?mass/.test(readFileSync(f, 'utf8')),
-    );
-    expect(fautifs.map((f) => f.slice(SRC.length))).toEqual([]);
+  it('une règle MASS ne vit que dans un bandeau (en-tête)', () => {
+    const ENTETES = [
+      'components/ScreenHeader.module.css',
+      'styles/global.css',
+      'styles/tokens.css',
+    ];
+    const fautifs: string[] = [];
+    for (const f of CSS) {
+      const nom = f.slice(SRC.length);
+      if (ENTETES.includes(nom)) continue;
+      const css = readFileSync(f, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+      for (const m of css.matchAll(/([^{}]*data-theme=['"]?mass[^{}]*)\{/g)) {
+        const selecteur = m[1]!.trim();
+        const bandeau =
+          nom === 'screens/Session.module.css' &&
+          /\.enteteSeance|\.metaDate|^:global\(\[data-theme='mass'\]\) \.title::after$/.test(
+            selecteur,
+          );
+        if (!bandeau) fautifs.push(`${nom} : ${selecteur}`);
+      }
+    }
+    expect(fautifs).toEqual([]);
   });
 
-  it('plus aucun jeton --mass-*', () => {
-    const fautifs = SOURCES.filter((f) => /--mass-[a-z]/.test(readFileSync(f, 'utf8')));
-    expect(fautifs.map((f) => f.slice(SRC.length))).toEqual([]);
+  it('seuls les quatre jetons des bandeaux MASS existent', () => {
+    const PERMIS = new Set([
+      '--mass-argent',
+      '--mass-ombre-titre',
+      '--mass-halo-trait',
+      '--mass-rouge',
+    ]);
+    const trouves = new Set(
+      SOURCES.flatMap((f) =>
+        [...readFileSync(f, 'utf8').matchAll(/--mass-[a-z-]+/g)].map((m) => m[0]),
+      ),
+    );
+    expect([...trouves].filter((t) => !PERMIS.has(t))).toEqual([]);
   });
 
   it('le bloc MASS des jetons ne déclare que des couleurs et des ombres', () => {

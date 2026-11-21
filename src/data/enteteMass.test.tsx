@@ -1,34 +1,33 @@
 /**
- * Les photos d'en-tête MASS (fournies par Guillaume, 14 novembre).
+ * Les en-têtes MASS (maquettes de Guillaume, 14 novembre).
  *
- * Depuis la DA claire (21 novembre), « la même DA pour chaque programme,
- * juste les couleurs changent » :
- * 1. Les photos restent — ce sont des images, pas une identité — et se
- *    posent dans les mêmes en-têtes que celles de POWER.
- * 2. La séance n'a pas de photo, pour MASS comme pour POWER ; le combiné non
- *    plus (il reprend l'en-tête de la séance).
- * 3. L'Accueil MASS n'a plus d'en-tête permanent ni de marque « MASS // ».
+ * 1. Les quatre photos d'en-tête existent et ne servent qu'à MASS.
+ * 2. L'Accueil MASS a un en-tête PERMANENT : « MASS », le nom exact du cycle,
+ *    « Semaine X / Y ». Jamais l'état du jour (« Ça commence bientôt »).
+ * 3. POWER et FEMMES ne reçoivent rien de tout cela.
  */
 import { existsSync } from 'node:fs';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import { ScreenHeader } from '../components/ScreenHeader';
-import { enteteDe, HABILLAGE } from './famillesVisuel';
+import { enteteAccueilFixe, enteteDe, HABILLAGE, marqueDe } from './famillesVisuel';
 import { VISUELS } from './visuels';
 
 const fichier = (nom: string) => new URL(`../../public/visuels/${nom}`, import.meta.url);
 
-describe('les photos d’en-tête MASS (six écrans, comme POWER)', () => {
-  it('chaque écran a la sienne, la séance aucune, et les deux tailles existent', () => {
+describe('les photos d’en-tête MASS (quatre écrans validés + quatre bandeaux du 14 novembre)', () => {
+  it('chaque écran a la sienne, et les deux tailles existent', () => {
     expect(HABILLAGE.mass.entetes).toEqual({
       accueil: 'massAthlete',
       semaine: 'massDisque',
+      seance: 'massSalle',
+      combine: 'massDisques',
       nutrition: 'massNutrition',
       progres: 'massProgres',
       mesures: 'massMesures',
       reglages: 'massReglages',
     });
-    for (const nom of Object.values(HABILLAGE.mass.entetes!).filter((n) => n !== undefined)) {
+    for (const nom of Object.values(HABILLAGE.mass.entetes!)) {
       for (const f of [VISUELS[nom].display, VISUELS[nom].mobile]) {
         expect(existsSync(fichier(f)), f).toBe(true);
       }
@@ -42,6 +41,8 @@ describe('les photos d’en-tête MASS (six écrans, comme POWER)', () => {
       for (const ecran of [
         'accueil',
         'semaine',
+        'seance',
+        'combine',
         'nutrition',
         'progres',
         'mesures',
@@ -53,11 +54,45 @@ describe('les photos d’en-tête MASS (six écrans, comme POWER)', () => {
   });
 });
 
-describe('l’Accueil MASS est celui de POWER (DA claire, 21 novembre)', () => {
-  it('plus de marque géante ni d’en-tête permanent : le titre est celui du jour', () => {
-    // Le module n'exporte plus rien qui fabrique une marque d'accueil.
-    expect(Object.keys(HABILLAGE.mass)).not.toContain('marqueAccueil');
-    const html = renderToStaticMarkup(<ScreenHeader title="Pecs, biceps" />);
+describe('l’en-tête permanent de l’Accueil MASS', () => {
+  it('MASS FORCE : marque, nom exact du cycle, semaine X / Y', () => {
+    expect(enteteAccueilFixe('mass-force', 4, 1)).toEqual({
+      marque: 'MASS',
+      titre: 'MASS FORCE',
+      sous: 'Semaine 1 / 4',
+    });
+    expect(enteteAccueilFixe('mass-force', 4, 3)?.sous).toBe('Semaine 3 / 4');
+  });
+
+  it('MASS CONGESTION porte son propre nom', () => {
+    expect(enteteAccueilFixe('mass4', 4, 2)?.titre).toBe('MASS CONGESTION');
+  });
+
+  it('POWER et FEMMES gardent leur en-tête du jour', () => {
+    expect(marqueDe('power12')).toBeUndefined();
+    expect(marqueDe('femmes8')).toBeUndefined();
+    expect(enteteAccueilFixe('power12', 12, 4)).toBeNull();
+    expect(enteteAccueilFixe('femmes8', 8, 1)).toBeNull();
+  });
+
+  it('le rendu : la marque en tête, le nom du cycle en titre, aucun état du jour', () => {
+    const e = enteteAccueilFixe('mass-force', 4, 1)!;
+    const html = renderToStaticMarkup(
+      <ScreenHeader
+        eyebrow="samedi 14 novembre"
+        title={e.titre}
+        subtitle={e.sous}
+        marque={e.marque}
+      />,
+    );
+    expect(html).toMatch(/<p class="[^"]*marque[^"]*">MASS<\/p>/);
+    expect(html).toMatch(/<h1[^>]*>MASS FORCE<\/h1>/);
+    expect(html).toContain('Semaine 1 / 4');
+    expect(html).not.toMatch(/bientôt/i);
+  });
+
+  it('sans marque, l’en-tête est celui d’avant (POWER)', () => {
+    const html = renderToStaticMarkup(<ScreenHeader title="Back Squat" />);
     expect(html).not.toContain('marque');
   });
 });

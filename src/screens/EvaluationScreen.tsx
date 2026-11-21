@@ -25,6 +25,8 @@
 import { useEffect, useState } from 'react';
 import { Icon } from '../components/Icon';
 import { Stepper } from '../components/Stepper';
+import { Visuel } from '../components/Visuel';
+import { HABILLAGE } from '../data/famillesVisuel';
 import {
   COMBINE_MASS_FORCE,
   VARIANTES,
@@ -67,9 +69,17 @@ export function EvaluationScreen({ onRetour }: { onRetour?: () => void }) {
 
   return (
     <div className={styles.screen}>
-      <header className={styles.header}>
+      <header className={`${styles.header} ${local.entete}`}>
+        {dansCycle && HABILLAGE.mass.entetes !== undefined && (
+          <Visuel
+            nom={HABILLAGE.mass.entetes.combine}
+            className={`${styles.enteteFond} ${local.photo}`}
+            sizes="100vw"
+            prioritaire
+          />
+        )}
         {onRetour !== undefined && (
-          <button type="button" className={styles.back} onClick={onRetour}>
+          <button type="button" className={`${styles.back} ${local.retour}`} onClick={onRetour}>
             <Icon name="arrow-left" size="18px" />
             MASS
           </button>
@@ -77,8 +87,8 @@ export function EvaluationScreen({ onRetour }: { onRetour?: () => void }) {
         {/* Le programme dont on passe le combiné. Dans le cycle, la navigation
             se fait par les onglets : c'est une étiquette, pas un bouton. */}
         {dansCycle && <p className={local.surtitre}>MASS FORCE</p>}
-        <h1 className={styles.title}>Combiné d’évaluation</h1>
-        <span className={styles.titleRule} aria-hidden="true" />
+        <h1 className={`${styles.title} ${local.titre}`}>Combiné d’évaluation</h1>
+        <span className={`${styles.titleRule} ${local.trait}`} aria-hidden="true" />
         <p className={`${styles.note} ${local.encadre}`}>
           <Icon name="haltere" size="26px" />
           <span>

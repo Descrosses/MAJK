@@ -21,7 +21,7 @@
  * qu'il l'a dessinée ainsi, et c'est cette maquette qui fait foi.
  */
 
-import { programmeParId, type FamilleId } from './catalogue';
+import { familleParId, programmeParId, type FamilleId } from './catalogue';
 import type { VisuelNom } from './visuels';
 
 export interface HabillageFamille {
@@ -37,31 +37,38 @@ export interface HabillageFamille {
   /**
    * Les photos d'en-tête de la famille, écran par écran. Absent : les écrans
    * gardent leur comportement d'origine (POWER choisit les siennes lui-même).
-   * Ce sont des IMAGES, pas une identité visuelle : depuis la DA claire MAJK,
-   * tous les programmes partagent les mêmes écrans, seul l'accent change.
    */
-  readonly entetes?: Readonly<Partial<Record<EcranEntete, VisuelNom>>>;
+  readonly entetes?: Readonly<Record<EcranEntete, VisuelNom>>;
+  /** Le nom de la famille s'affiche en très gros sur l'Accueil (maquette MASS). */
+  readonly marqueAccueil?: true;
 }
 
-/**
- * Les écrans d'un cycle qui peuvent porter une photo d'en-tête. La séance n'en
- * a jamais (voir Session.module.css), quel que soit le programme.
- */
-export type EcranEntete = 'accueil' | 'semaine' | 'nutrition' | 'progres' | 'mesures' | 'reglages';
+/** Les quatre écrans d'un cycle qui portent une photo d'en-tête. */
+export type EcranEntete =
+  | 'accueil'
+  | 'semaine'
+  | 'seance'
+  | 'combine'
+  | 'nutrition'
+  | 'progres'
+  | 'mesures'
+  | 'reglages';
 
 export const HABILLAGE: Record<FamilleId, HabillageFamille> = {
   power: { photo: 'sprint', teinte: '#2f7fd0' },
   /*
-   * Les photos d'en-tête viennent de Guillaume (14 novembre), pour toute la
-   * famille MASS : FORCE comme CONGESTION. Depuis la DA claire (21 novembre),
-   * elles se posent dans les mêmes en-têtes que celles de POWER.
+   * Les quatre en-têtes viennent des maquettes de Guillaume (14 novembre),
+   * pour toute la famille MASS : FORCE comme CONGESTION.
    */
   mass: {
     photo: 'force',
     teinte: '#c8312f',
+    marqueAccueil: true,
     entetes: {
       accueil: 'massAthlete',
       semaine: 'massDisque',
+      seance: 'massSalle',
+      combine: 'massDisques',
       // Bandeaux du 14 novembre, pour toute la famille (FORCE et CONGESTION).
       nutrition: 'massNutrition',
       progres: 'massProgres',
@@ -89,6 +96,35 @@ export const HABILLAGE: Record<FamilleId, HabillageFamille> = {
 export function enteteDe(programmeId: string, ecran: EcranEntete): VisuelNom | undefined {
   const def = programmeParId(programmeId);
   return def === null ? undefined : HABILLAGE[def.familleId]?.entetes?.[ecran];
+}
+
+/** Le nom de famille à afficher en marque sur l'Accueil, lu au catalogue. */
+export function marqueDe(programmeId: string): string | undefined {
+  const def = programmeParId(programmeId);
+  if (def === null || HABILLAGE[def.familleId]?.marqueAccueil !== true) return undefined;
+  return familleParId(def.familleId)?.nom;
+}
+
+/**
+ * L'en-tête PERMANENT de l'Accueil, pour une famille qui pose sa marque
+ * (MASS) : la marque, le nom exact du cycle tel qu'au catalogue, puis
+ * « Semaine X / Y ». `null` ailleurs : POWER garde son en-tête du jour.
+ *
+ * Décision de Guillaume : « Ça commence bientôt » est un état temporaire, pas
+ * l'identité du programme. Le titre du jour descend sous l'en-tête.
+ */
+export function enteteAccueilFixe(
+  programmeId: string,
+  dureeSemaines: number,
+  semaine: number | null,
+): { marque: string; titre: string; sous: string | undefined } | null {
+  const marque = marqueDe(programmeId);
+  if (marque === undefined) return null;
+  return {
+    marque,
+    titre: programmeParId(programmeId)?.nom ?? marque,
+    sous: semaine === null ? undefined : `Semaine ${semaine} / ${dureeSemaines}`,
+  };
 }
 
 /*
