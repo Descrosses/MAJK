@@ -48,6 +48,14 @@ en IA. **Réponds toujours en français.**
 > bas sont de l'HISTORIQUE. Garde-fou : `styles/memeDaPourTous.test.ts`.
 > Lot 2 : pastilles à bord décoratif, consignes en aplat `--accent-dim`,
 > sélecteur bordé avec « + » à l'accent (`styles/composantsClairs.test.ts`).
+> **Lot 5 : le catalogue en deux écrans (option B choisie par Guillaume).**
+> `#/catalogue` = familles FERMÉES, une carte-lien chacune avec son compte
+> (« 6 étapes · 1 disponible ») ; `#/catalogue/<famille>` = écran de la
+> famille, aux couleurs de son thème (`data-theme` posé sur l'écran ;
+> ME, MYSELF & I garde la plateforme). Le programme qu'on reprend, sinon le
+> premier qu'on peut démarrer, est déplié d'office en tête ; jamais un « à
+> venir ». Prérequis et matériel dans un seul repli. Aucune règle du
+> catalogue n'a changé. `screens/catalogueFamilles.test.tsx`.
 
 ---
 

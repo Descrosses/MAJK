@@ -45,17 +45,10 @@ export interface HabillageFamille {
 
 /** Les quatre écrans d'un cycle qui portent une photo d'en-tête. */
 export type EcranEntete =
-  | 'accueil'
-  | 'semaine'
-  | 'seance'
-  | 'combine'
-  | 'nutrition'
-  | 'progres'
-  | 'mesures'
-  | 'reglages';
+  'accueil' | 'semaine' | 'seance' | 'combine' | 'nutrition' | 'progres' | 'mesures' | 'reglages';
 
 export const HABILLAGE: Record<FamilleId, HabillageFamille> = {
-  power: { photo: 'sprint', teinte: '#2f7fd0' },
+  power: { photo: 'sprint', teinte: '#2a4dbf' },
   /*
    * Les quatre en-têtes viennent des maquettes de Guillaume (14 novembre),
    * pour toute la famille MASS : FORCE comme CONGESTION.
@@ -81,7 +74,7 @@ export const HABILLAGE: Record<FamilleId, HabillageFamille> = {
    * programme, qui donnerait une image fausse de ce qu'elle sera. Même
    * traitement que POWER et MASS : photo brute, voile en dégradé par le code.
    */
-  femmes: { photo: 'carteFemmes', teinte: '#d4578f' },
+  femmes: { photo: 'carteFemmes', teinte: '#b04a72' },
   /*
    * Une famille sans style d'entraînement à montrer : elle représente CELUI
    * DE LA PERSONNE. D'où une photo qui ne montre aucun exercice — une

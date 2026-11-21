@@ -30,11 +30,13 @@
 }
 
 .ligne {
-  border-top: 1px solid var(--line);
-}
-
-.ligne:first-child {
-  border-top: none;
+  /* Chaque programme est une carte (maquette MAJK, option B). */
+  margin-bottom: 10px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
 }
 
 .titreLigne {
@@ -42,6 +44,7 @@
   align-items: center;
   gap: 10px;
   width: 100%;
+  min-height: var(--tap);
   padding: 12px 0;
   border: none;
   background: none;
@@ -60,8 +63,11 @@
 }
 
 .nom {
+  font-family: var(--font-cond);
   font-weight: 700;
-  font-size: 0.98rem;
+  font-size: 1.125rem;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
   white-space: nowrap;
 }
 
@@ -76,18 +82,20 @@
  * mérite d'être signalée, et la signaler en vert éviterait de promettre.
  */
 .etat {
-  padding: 3px 9px;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  color: var(--ink-3);
-  font-size: 0.72rem;
-  font-weight: 600;
+  padding: 4px 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  color: var(--ink-2);
+  font-size: 0.75rem;
+  font-weight: 700;
   white-space: nowrap;
 }
 
 .dispo {
-  border-color: color-mix(in srgb, var(--vert) 45%, transparent);
-  color: var(--vert);
+  /* Vert plein, texte blanc : 6,5:1. Seule la disponibilité se signale. */
+  border-color: var(--vert);
+  background: var(--vert);
+  color: #fff;
 }
 
 /* Parcours : le numéro d'étape, et le badge d'accès sous la ligne. */
@@ -95,22 +103,22 @@
   display: inline-grid;
   place-items: center;
   flex: none;
-  width: 24px;
-  height: 24px;
+  width: 30px;
+  height: 30px;
   border-radius: 50%;
   background: var(--surface-3);
   color: var(--ink);
   font-family: var(--font-cond);
   font-weight: 700;
-  font-size: 0.85rem;
+  font-size: 0.95rem;
 }
 
 .badge {
   display: flex;
   align-items: center;
   gap: 6px;
-  margin: -4px 0 10px 34px;
-  font-size: 0.78rem;
+  margin: -4px 0 12px 40px;
+  font-size: 0.8125rem;
   color: var(--ink-3);
 }
 
@@ -150,8 +158,8 @@
 /* Le matériel à prévoir : un onglet repliable, fermé par défaut. */
 .materielBloc {
   margin-top: 12px;
-  border: 1px solid var(--line);
   border-radius: var(--radius-sm);
+  background: var(--surface-2);
   overflow: hidden;
 }
 
@@ -160,32 +168,34 @@
   align-items: center;
   gap: 8px;
   width: 100%;
-  min-height: 44px;
-  padding: 0 12px;
+  min-height: 52px;
+  padding: 0 14px;
   border: 0;
-  background: var(--surface-2);
+  background: none;
   color: var(--ink);
-  font-family: var(--font-cond);
-  font-size: 0.95rem;
+  font-size: 0.9375rem;
   font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
   text-align: left;
   cursor: pointer;
 }
 
 .materielCompte {
   flex: 1;
-  font-family: var(--font);
   font-size: var(--fs-small);
   font-weight: 500;
-  letter-spacing: 0;
-  text-transform: none;
   color: var(--ink-3);
 }
 
-.materielBloc .materiel {
-  padding: 8px;
+.materielCorps {
+  padding: 0 12px 12px;
+}
+
+.materielCorps .sousSection:first-child {
+  margin-top: 0;
+}
+
+.materielBloc .materiel li {
+  background: var(--surface);
 }
 
 /* Le matériel à prévoir : l'objet en gras, son usage, l'alternative. */
@@ -220,15 +230,20 @@
 }
 
 .action {
-  display: block;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   width: 100%;
+  min-height: 52px;
   margin-top: 14px;
   padding: 12px 16px;
   border: none;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius);
   background: var(--accent);
+  box-shadow: var(--shadow-action);
   color: var(--ink-on-accent);
-  font-size: 0.95rem;
+  font-size: 1rem;
   font-weight: 700;
   cursor: pointer;
 }
@@ -237,15 +252,25 @@
   background: var(--accent-deep);
 }
 
+/* Le combiné d'évaluation de MASS FORCE : une seconde action, pas la
+   première — « Commencer » garde seul l'aplat. */
+.actionSecondaire {
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  box-shadow: none;
+  color: var(--ink);
+}
+
 .annuler {
   display: block;
   width: 100%;
+  min-height: var(--tap);
   margin-top: 8px;
   padding: 11px 16px;
-  border: 1px solid var(--line);
+  border: 1px solid var(--line-strong);
   border-radius: var(--radius-sm);
-  background: none;
-  color: var(--ink-2);
+  background: var(--surface);
+  color: var(--ink);
   font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
@@ -346,11 +371,12 @@
   position: relative;
   display: block;
   width: 100%;
-  height: 128px;
+  height: 140px;
   padding: 0;
   border: 0;
   background: none;
   text-align: left;
+  text-decoration: none;
 }
 
 .bannierePhoto {
@@ -368,14 +394,19 @@
 .banniereVoile {
   position: absolute;
   inset: 0;
+  /*
+   * La couleur de la famille, franche à gauche sous le texte, qui laisse la
+   * photo respirer à droite (maquette MAJK, option B). Assombrie d'un quart
+   * sous le texte : le doré de ME, MYSELF & I ne porterait pas le blanc.
+   */
   background:
     linear-gradient(
       90deg,
-      rgb(var(--voile) / 97%) 10%,
-      rgb(var(--voile) / 55%) 62%,
-      rgb(var(--voile) / 10%) 100%
+      color-mix(in srgb, var(--teinte) 72%, #000) 0%,
+      color-mix(in srgb, var(--teinte) 78%, transparent) 50%,
+      color-mix(in srgb, var(--teinte) 20%, transparent) 100%
     ),
-    linear-gradient(90deg, color-mix(in srgb, var(--teinte) 40%, transparent), transparent 80%);
+    linear-gradient(90deg, rgb(0 0 0 / 30%), rgb(0 0 0 / 5%));
 }
 
 .banniereTexte {
@@ -403,27 +434,12 @@
   color: var(--ink-2);
 }
 
-.barres {
-  display: flex;
-  gap: 4px;
-  margin-top: 4px;
-}
-
-.barres i {
-  display: block;
-  width: 15px;
-  height: 7px;
-  border-radius: 1px;
-  background: var(--teinte, var(--accent));
-  transform: skewX(-24deg);
-}
-
-.barres i:nth-child(2) {
-  opacity: 0.75;
-}
-
-.barres i:nth-child(3) {
-  opacity: 0.5;
+/* « 6 étapes · 1 disponible » : ce que la famille offre, avant d'entrer. */
+.compte {
+  margin-top: 6px;
+  font-size: var(--fs-small);
+  font-weight: 700;
+  color: var(--ink);
 }
 
 .banniereBadge {
@@ -432,10 +448,10 @@
   right: 12px;
   padding: 3px 10px;
   border-radius: 999px;
-  background: var(--teinte, var(--accent));
+  background: rgb(255 255 255 / 18%);
   color: var(--ink);
   font-family: var(--font-cond);
-  font-size: 0.7rem;
+  font-size: 0.75rem;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -444,21 +460,20 @@
 .banniereChevron {
   position: absolute;
   top: 50%;
-  right: 12px;
+  right: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 34px;
-  height: 34px;
+  width: 40px;
+  height: 40px;
   transform: translateY(-50%);
   border-radius: 999px;
-  background: rgb(255 255 255 / 12%);
+  background: rgb(255 255 255 / 18%);
   color: var(--ink);
 }
 
 .corpsFamille {
-  padding: 4px var(--pad) var(--pad);
-  border-top: 1px solid var(--line);
+  padding: var(--pad) var(--pad) var(--pad);
 }
 
 /* Même convention que le reste de l'écran : chaque bloc porte sa marge. */
@@ -476,4 +491,118 @@
   font-size: var(--fs-small);
   font-weight: 600;
   letter-spacing: 0.02em;
+}
+
+/* ===================================================================== */
+/*  L'écran d'une famille (option B, lot 5)                              */
+/* ===================================================================== */
+
+/* L'en-tête : photo de la famille, sa couleur, son nom en grand. */
+.heroFamille {
+  --ink: var(--ink-photo);
+  --ink-2: var(--ink-photo-2);
+  position: relative;
+  isolation: isolate;
+  min-height: calc(230px + env(safe-area-inset-top, 0px));
+  margin-bottom: 0;
+  overflow: hidden;
+  color: var(--ink);
+}
+
+.heroFamille .bannierePhoto {
+  z-index: -2;
+}
+
+.heroVoile {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background:
+    linear-gradient(180deg, rgb(var(--voile) / 35%) 0%, rgb(var(--voile) / 92%) 100%),
+    linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--teinte) 65%, transparent) 0%,
+      color-mix(in srgb, var(--teinte) 25%, transparent) 100%
+    );
+}
+
+/* Le retour vers la liste : une pastille sur la photo, 44 px de haut. */
+.retourFamilles {
+  position: absolute;
+  top: calc(env(safe-area-inset-top, 0px) + 12px);
+  left: var(--pad);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 0 16px 0 12px;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 18%);
+  color: var(--ink);
+  font-weight: 600;
+  font-size: 0.9375rem;
+  text-decoration: none;
+}
+
+.heroTexte {
+  position: absolute;
+  left: var(--pad);
+  right: var(--pad);
+  bottom: 18px;
+}
+
+.heroSurTitre {
+  margin: 0;
+  font-family: var(--font-cond);
+  font-size: 0.875rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+
+.heroNom {
+  margin: 2px 0 0;
+  font-family: var(--font-cond);
+  font-size: clamp(2.5rem, 12vw, 3.25rem);
+  font-style: italic;
+  font-weight: 800;
+  line-height: 1;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+
+.heroCompte {
+  margin: 6px 0 0;
+  font-size: var(--fs-small);
+  font-weight: 600;
+  color: var(--ink-2);
+}
+
+.resumeFamille {
+  margin: 0 0 14px;
+  color: var(--ink-2);
+  font-size: 0.9375rem;
+  line-height: 1.5;
+}
+
+/* Le programme à suivre : déplié d'office, bordé de l'accent. */
+.vedette {
+  border: 2px solid var(--accent);
+  box-shadow: 0 10px 24px rgb(31 35 39 / 10%);
+}
+
+.etapeVedette {
+  background: var(--accent);
+  color: var(--ink-on-accent);
+}
+
+.titreAutres {
+  margin: 22px 0 10px;
+  font-family: var(--font-cond);
+  font-size: 1.125rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink);
 }
