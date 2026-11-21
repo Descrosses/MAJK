@@ -38,8 +38,6 @@ export function ScreenHeader({
   eyebrow,
   title,
   subtitle,
-  marque,
-  argent = false,
   visuel,
   /** Premier écran ouvert : sa photo se charge tout de suite, pas en différé. */
   prioritaire = false,
@@ -51,16 +49,6 @@ export function ScreenHeader({
   title: string;
   /** Sous le titre, encadré de deux traits rouges. */
   subtitle?: string;
-  /**
-   * Le nom de la famille en très gros au-dessus du titre (« MASS »). Le titre
-   * passe alors en seconde ligne, plus petit. Maquette MASS de Guillaume.
-   */
-  marque?: string;
-  /**
-   * Titre argenté sans « // », trait rouge court, photo qui passe sous la
-   * barre d'état : l'écran Semaine MASS, d'après la référence de Guillaume.
-   */
-  argent?: boolean;
   /** Photo d'ambiance, quand elle existe. */
   visuel?: VisuelNom;
   prioritaire?: boolean;
@@ -72,7 +60,7 @@ export function ScreenHeader({
   const entete = (
     <header
       data-visuel={visuel}
-      className={`${styles.header} ${pleineImage ? styles.hero : visuel ? styles.avecVisuel : ''} ${marque !== undefined ? styles.avecMarque : ''} ${argent ? styles.argent : ''}`}
+      className={`${styles.header} ${pleineImage ? styles.hero : visuel ? styles.avecVisuel : ''}`}
     >
       <StadiumGlow className={styles.lueur} />
       {visuel &&
@@ -88,10 +76,7 @@ export function ScreenHeader({
 
       <div className={styles.content}>
         {eyebrow && <p className={styles.eyebrow}>{eyebrow}</p>}
-        {marque !== undefined && <p className={styles.marque}>{marque}</p>}
-        <h1 className={`${styles.title} ${marque !== undefined ? styles.titreSecond : ''}`}>
-          {title}
-        </h1>
+        <h1 className={styles.title}>{title}</h1>
         {/*
           La ligne de sous-titre est TOUJOURS rendue, même vide.
           Le bloc de titre étant calé en bas de l'en-tête, une rubrique sans

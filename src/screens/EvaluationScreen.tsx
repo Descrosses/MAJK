@@ -25,8 +25,6 @@
 import { useEffect, useState } from 'react';
 import { Icon } from '../components/Icon';
 import { Stepper } from '../components/Stepper';
-import { Visuel } from '../components/Visuel';
-import { HABILLAGE } from '../data/famillesVisuel';
 import {
   COMBINE_MASS_FORCE,
   VARIANTES,
@@ -69,17 +67,9 @@ export function EvaluationScreen({ onRetour }: { onRetour?: () => void }) {
 
   return (
     <div className={styles.screen}>
-      <header className={`${styles.header} ${local.entete}`}>
-        {dansCycle && HABILLAGE.mass.entetes !== undefined && (
-          <Visuel
-            nom={HABILLAGE.mass.entetes.combine}
-            className={`${styles.enteteFond} ${local.photo}`}
-            sizes="100vw"
-            prioritaire
-          />
-        )}
+      <header className={styles.header}>
         {onRetour !== undefined && (
-          <button type="button" className={`${styles.back} ${local.retour}`} onClick={onRetour}>
+          <button type="button" className={styles.back} onClick={onRetour}>
             <Icon name="arrow-left" size="18px" />
             MASS
           </button>
@@ -87,8 +77,8 @@ export function EvaluationScreen({ onRetour }: { onRetour?: () => void }) {
         {/* Le programme dont on passe le combiné. Dans le cycle, la navigation
             se fait par les onglets : c'est une étiquette, pas un bouton. */}
         {dansCycle && <p className={local.surtitre}>MASS FORCE</p>}
-        <h1 className={`${styles.title} ${local.titre}`}>Combiné d’évaluation</h1>
-        <span className={`${styles.titleRule} ${local.trait}`} aria-hidden="true" />
+        <h1 className={styles.title}>Combiné d’évaluation</h1>
+        <span className={styles.titleRule} aria-hidden="true" />
         <p className={`${styles.note} ${local.encadre}`}>
           <Icon name="haltere" size="26px" />
           <span>
@@ -203,8 +193,8 @@ function CarteTest({
       aria-label={`Test ${rang + 1} : ${test.nom}`}
     >
       <div className={styles.exHead}>
-        <p className={`${styles.exRepere} ${local.repere}`}>Test {rang + 1}</p>
-        <div className={`${styles.exName} ${local.nom}`}>{test.nom}</div>
+        <p className={styles.exRepere}>Test {rang + 1}</p>
+        <div className={styles.exName}>{test.nom}</div>
 
         {/* Ce que l'on sait déjà, pour CE matériel. */}
         <p className={local.etat} role="status">
@@ -267,10 +257,10 @@ function CarteTest({
       )}
 
       <div className={styles.setRow}>
-        <div className={`${styles.setIndex} ${local.rang}`}>{rang + 1}</div>
+        <div className={styles.setIndex}>{rang + 1}</div>
         <div className={styles.fields}>
           <div
-            className={`${styles.steppersLigne} ${local.steppers}`}
+            className={styles.steppersLigne}
             style={{ gridTemplateColumns: `repeat(${modalite === 'direct' ? 1 : 2}, auto)` }}
           >
             <Stepper
@@ -310,7 +300,7 @@ function CarteTest({
           </label>
           <button
             type="button"
-            className={`${styles.validate} ${local.valider}`}
+            className={styles.validate}
             onClick={() => void enregistrer()}
             disabled={!pret || envoi}
           >

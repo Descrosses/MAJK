@@ -24,6 +24,19 @@ en IA. **Réponds toujours en français.**
 > `size-adjust` 86,4 % pour garder les largeurs de Barlow) et Inter (texte).
 > Zones sombres (en-têtes à photo, cartes de programme, bannières) : encres
 > `--ink-photo*`. Contrastes : `styles/themesClairs.test.ts`.
+>
+> **« La même DA pour chaque programme, juste les couleurs changent »**
+> (Guillaume, 21 novembre, lot 3). MASS n'a PLUS AUCUN style propre : plus de
+> règle `[data-theme='mass']` hors `tokens.css`, plus de jeton `--mass-*`,
+> plus de titre argent, de « // », de dégradé ni de lueur, plus de marque
+> « MASS » ni d'en-tête permanent à l'Accueil, plus de photo sur la Séance ni
+> le Combiné (comme POWER). Les photos d'en-tête des autres écrans restent :
+> ce sont des images, posées dans les en-têtes de POWER. Rouge MASS :
+> `#c8312f` (le vif `#d71f26` était « clinquant », `#b94a48` « terne »).
+> Garde-fou : `styles/memeDaPourTous.test.ts`. Le point 9 de la section MASS
+> plus bas est de l'HISTORIQUE. FEMMES suivra la même règle (lot à venir).
+> Lot 2 : pastilles à bord décoratif, consignes en aplat `--accent-dim`,
+> sélecteur bordé avec « + » à l'accent (`styles/composantsClairs.test.ts`).
 
 ---
 

@@ -168,7 +168,6 @@ export function WeekScreen({
           : enteteDe(programme.id, 'semaine') !== undefined
             ? { visuel: enteteDe(programme.id, 'semaine')! }
             : {})}
-        argent={programme.id !== 'power12' && enteteDe(programme.id, 'semaine') !== undefined}
         prioritaire
       />
 

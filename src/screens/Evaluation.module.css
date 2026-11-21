@@ -16,8 +16,8 @@
 /* Le choix retenu (matériel, modalité) : il doit se voir d'un coup d'œil. */
 .choisi {
   border-color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 22%, var(--surface));
-  color: var(--ink);
+  background: var(--accent);
+  color: var(--ink-on-accent);
 }
 
 .etat {
@@ -90,226 +90,55 @@
 
 /* ===================================================================== */
 /*
- * Le combiné MASS d'après la référence de Guillaume (14 novembre).
- * Mesures relevées sur sa capture (850 px = 402 px CSS, soit × 0,473),
- * écran entier, barre d'état comprise.
+ * Le combiné MASS dans la DA claire MAJK (21 novembre) : mêmes classes que la
+ * séance POWER, seul l'accent change. Ces règles ne couvrent que ce que la
+ * séance n'a pas. L'ancienne transcription sombre de la référence du
+ * 14 novembre (titre argent, encadrés noirs, dégradés rouges) est retirée sur
+ * décision de Guillaume : « la même DA pour chaque programme ».
  *
- * Écarts VOULUS, parce que la référence contredit une règle de l'app :
- * - Boutons, curseurs et champ de date gardent 48 px de haut (`--tap`, « non
- *   négociable ») ; la référence les dessine à 34–36 px.
- * - « Enregistrer le test » reste dans la carte : sans lui, rien ne s'écrit.
- * - Dans le cycle, « MASS FORCE » est une étiquette sans chevron : la
- *   navigation s'y fait par les onglets, il n'y a nulle part où revenir.
+ * Écarts toujours VOULUS : boutons, curseurs et champ de date à 48 px
+ * (`--tap`) ; « Enregistrer le test » dans la carte ; dans le cycle,
+ * « MASS FORCE » est une étiquette, pas un bouton.
  */
 
-/* ---------------------------------------------------------- en-tête -- */
-
-/* La photo passe sous la barre d'état, comme sur la référence. */
-.entete {
-  --haut-ecran: env(safe-area-inset-top, 0px);
-  isolation: isolate;
-  margin-top: calc(-1 * var(--haut-ecran));
-  /* Même correction que la séance : « MASS FORCE » sous la barre d'état. */
-  padding: calc(var(--haut-ecran) + 10px) 14px 0;
-  border-bottom: 0;
-  background: var(--bg);
-}
-
-/* Les disques à droite, du haut de l'écran jusque sous le titre. */
-.entete .photo {
-  top: 0;
-  right: -18px;
-  left: auto;
-  width: 440px;
-  height: calc(196px + var(--haut-ecran) * 0.5);
-  opacity: 1;
-  -webkit-mask-image:
-    linear-gradient(90deg, transparent 0%, rgb(0 0 0 / 30%) 38%, #000 66%),
-    linear-gradient(180deg, #000 0%, #000 62%, transparent 100%);
-  -webkit-mask-composite: source-in;
-  mask-image:
-    linear-gradient(90deg, transparent 0%, rgb(0 0 0 / 30%) 38%, #000 66%),
-    linear-gradient(180deg, #000 0%, #000 62%, transparent 100%);
-  mask-composite: intersect;
-}
-
-.surtitre,
-.retour {
+/* Le programme dont on passe le combiné : un sur-titre, comme « Semaine 10 ». */
+.surtitre {
   margin: 0;
-  color: #f2f2f2;
+  color: var(--ink-2);
   font-family: var(--font-cond);
-  font-size: 1.125rem;
-  font-style: italic;
-  font-weight: 800;
+  font-size: 1rem;
+  font-weight: 700;
   letter-spacing: 0.03em;
+  line-height: 1.2;
   text-transform: uppercase;
 }
 
-.surtitre {
-  padding: 2px 0 0 2px;
-  line-height: 1.2;
-}
-
-/* Deux lignes, argent, vrai italique extra-gras ; le « // » rouge reste. */
-.entete .titre {
-  max-width: 300px;
-  margin-top: 6px;
-  font-family: var(--font-cond);
-  font-size: 2.95rem;
-  font-style: italic;
-  font-weight: 800;
-  line-height: 0.92;
-  transform: none;
-  /* Le dégradé se répète LIGNE PAR LIGNE : sinon la 1re ligne est blanche
-     et la 2e grise, là où la référence fait briller chacune. */
-  background: var(--mass-argent) 0 0 / 100% 0.92em repeat-y;
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  filter: var(--mass-ombre-titre);
-}
-
-/* Le trait rouge, long, qui s'éteint vers la droite. */
-.entete .trait {
-  width: 140px;
-  height: 3px;
-  margin-top: 14px;
-  border-radius: 2px;
-  clip-path: none;
-  background: linear-gradient(90deg, #e3141c 0%, #e3141c 48%, rgb(227 20 28 / 0%) 100%);
-  box-shadow: var(--mass-halo-trait);
-}
-
-/* Les trois encadrés : bordés en entier, icône rouge à gauche. */
-.entete .encadre {
+/* Les trois encadrés : la consigne de séance, plus une icône à gauche. */
+.encadre {
   display: grid;
-  grid-template-columns: 34px minmax(0, 1fr);
+  grid-template-columns: 28px minmax(0, 1fr);
   align-items: center;
-  gap: 15px;
-  min-height: 64px;
-  margin-top: 8px;
-  padding: 7px 14px 7px 13px;
-  border: 1px solid #3a3b3c;
-  border-radius: 10px;
-  background: linear-gradient(180deg, #1c1c1d 0%, #121213 100%);
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / 6%);
-  color: #e6e6e6;
-  line-height: 1.2;
+  gap: 12px;
 }
 
-.entete .trait + .encadre {
-  margin-top: 18px;
-}
-
-/* Icônes rouges, au trait plus épais que celui de la navigation. */
 .encadre svg {
   justify-self: center;
-  width: 30px;
-  height: 30px;
-  color: var(--mass-rouge);
-  stroke-width: 2.6;
+  width: 24px;
+  height: 24px;
+  color: var(--accent-ink);
 }
 
 /* ------------------------------------------------------ carte de test -- */
 
 .carte {
-  margin: 16px 14px;
-  border: 1px solid var(--mass-carte-bord);
-  border-radius: 12px;
-  background: var(--mass-carte-fond);
-  box-shadow: var(--mass-liseret);
+  border: 1px solid var(--line);
 }
 
-.repere,
-.nom,
-.rang {
-  font-family: var(--font-cond);
-  font-style: italic;
-  font-weight: 800;
-}
-
-.repere {
-  color: var(--ink-2);
-  font-size: 1rem;
-  letter-spacing: 0.06em;
-}
-
-.nom {
-  color: var(--ink);
-  font-size: 1.875rem;
-  letter-spacing: 0.01em;
-  line-height: 1.05;
-}
-
-.carte .etat {
-  color: var(--ink-2);
-  font-size: 0.9375rem;
-  line-height: 1.25;
-}
-
-.carte .legende {
-  color: var(--ink-2);
-  font-size: 0.875rem;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-}
-
-/* Matériel et modalité : sombres, la choisie rouge avec son halo. */
-.option {
-  border-color: var(--mass-sombre-bord);
-  border-radius: 10px;
-  background: var(--mass-sombre-fond);
-  box-shadow: var(--mass-liseret);
-  color: var(--ink);
-  /* Gras penché, plus extra-gras : les choix se lisent, le titre domine. */
-  font-family: var(--font-cond);
-  font-size: 1.1875rem;
-  font-style: italic;
-  font-weight: 700;
-}
-
+/* Le choix retenu (matériel, modalité) : plein, à l'accent du programme. */
 .option.choisi {
-  border-color: var(--mass-rouge-bord);
-  background: var(--mass-degrade-choix);
-  box-shadow:
-    0 0 14px rgb(226 10 17 / 45%),
-    var(--mass-liseret-choix);
-}
-
-.rang {
-  color: var(--ink);
-  font-size: 1.875rem;
-  line-height: 1.5;
-}
-
-/* Les curseurs : libellé clair, chiffre en italique extra-gras. */
-.steppers > div > div:first-child {
-  color: var(--ink-2);
-  font-size: 0.8125rem;
-  font-weight: 700;
-}
-
-.steppers > div > div:last-child {
-  border: 1px solid var(--mass-curseur-bord);
-  background: var(--mass-curseur-fond);
-}
-
-.steppers button:not(:global(.tnum)) {
-  background: rgb(0 0 0 / 18%);
-}
-
-.steppers :global(.tnum) {
-  color: var(--ink);
-  font-family: var(--font-cond);
-  font-size: 1.75rem;
-  font-style: italic;
-  font-weight: 800;
-}
-
-.carte .date {
-  color: var(--ink-2);
-  font-size: 0.9375rem;
-  font-weight: 500;
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--ink-on-accent);
 }
 
 /* Le champ de date : icône calendrier à gauche, derrière un filet. */
@@ -334,7 +163,7 @@
   bottom: 10px;
   left: 50px;
   width: 1px;
-  background: var(--mass-curseur-bord);
+  background: var(--line-strong);
   pointer-events: none;
 }
 
@@ -342,28 +171,6 @@
   width: 100%;
   min-height: var(--tap);
   padding-left: 64px;
-  border-color: var(--mass-curseur-bord);
-  border-radius: 10px;
-  background: var(--mass-champ-fond);
-  color: var(--ink);
   font-size: 1.0625rem;
   font-weight: 700;
-}
-
-.valider {
-  border: 1px solid var(--mass-rouge-bord);
-  border-radius: 10px;
-  background: var(--mass-degrade-choix);
-  font-family: var(--font-cond);
-  font-size: 1.1875rem;
-  font-style: italic;
-  font-weight: 800;
-  box-shadow: var(--mass-liseret-choix);
-}
-
-.valider:disabled {
-  border-color: var(--mass-curseur-bord);
-  background: var(--surface-3);
-  color: var(--ink-3);
-  box-shadow: none;
 }
